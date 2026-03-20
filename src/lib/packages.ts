@@ -1,6 +1,18 @@
-// lib/packages.ts — package CRUD using Neon PostgreSQL
+// lib/packages.ts — package CRUD (Neon PostgreSQL in prod, SQLite in dev)
 import { sql } from './db'
 import type { PackageMeta, PackageVersion } from './types'
+
+// ── helpers ──────────────────────────────────────────────────────────────────
+function parseArr(v: unknown): string[] {
+  if (Array.isArray(v)) return v as string[]
+  if (typeof v === 'string') { try { return JSON.parse(v) } catch { return [] } }
+  return []
+}
+function parseObj(v: unknown): Record<string, string> {
+  if (v && typeof v === 'object' && !Array.isArray(v)) return v as Record<string, string>
+  if (typeof v === 'string') { try { return JSON.parse(v) } catch { return {} } }
+  return {}
+}
 
 export function validatePackageName(name: string): string | null {
   if (!name) return 'Name is required'
@@ -8,7 +20,6 @@ export function validatePackageName(name: string): string | null {
     return 'Name must start with a letter; only lowercase letters, numbers, - or _ (max 64 chars)'
   return null
 }
-
 export function validateVersion(v: string): string | null {
   if (!v) return 'Version is required'
   if (!/^\d+\.\d+(\.\d+)?([.-][a-zA-Z0-9]+)*$/.test(v))
@@ -20,13 +31,13 @@ function rowToMeta(r: Record<string, unknown>): PackageMeta {
   return {
     name:            r.name as string,
     owner:           r.owner as string,
-    description:     r.description as string,
+    description:     (r.description as string) || '',
     latest:          r.latest as string,
-    license:         r.license as string,
+    license:         (r.license as string) || 'MIT',
     homepage:        r.homepage as string | undefined,
     repository:      r.repository as string | undefined,
-    keywords:        (r.keywords as string[]) || [],
-    classifiers:     (r.classifiers as string[]) || [],
+    keywords:        parseArr(r.keywords),
+    classifiers:     parseArr(r.classifiers),
     total_downloads: Number(r.total_downloads) || 0,
     created_at:      r.created_at as string,
     updated_at:      r.updated_at as string,
@@ -37,19 +48,19 @@ function rowToVersion(r: Record<string, unknown>): PackageVersion {
   return {
     name:               r.name as string,
     version:            r.version as string,
-    description:        r.description as string,
-    author:             r.author as string,
+    description:        (r.description as string) || '',
+    author:             (r.author as string) || '',
     author_email:       r.author_email as string | undefined,
-    license:            r.license as string,
+    license:            (r.license as string) || 'MIT',
     homepage:           r.homepage as string | undefined,
     repository:         r.repository as string | undefined,
-    keywords:           (r.keywords as string[]) || [],
-    classifiers:        (r.classifiers as string[]) || [],
+    keywords:           parseArr(r.keywords),
+    classifiers:        parseArr(r.classifiers),
     requires_omnikarai: r.requires_omnikarai as string | undefined,
-    dependencies:       (r.dependencies as Record<string, string>) || {},
-    dev_dependencies:   (r.dev_dependencies as Record<string, string>) || {},
-    readme:             r.readme as string,
-    changelog:          r.changelog as string,
+    dependencies:       parseObj(r.dependencies),
+    dev_dependencies:   parseObj(r.dev_dependencies),
+    readme:             (r.readme as string) || '',
+    changelog:          (r.changelog as string) || '',
     file_size:          r.file_size as number | undefined,
     file_hash:          r.file_hash as string | undefined,
     yanked:             Boolean(r.yanked),
@@ -95,44 +106,49 @@ export async function searchPackages(query: string): Promise<PackageMeta[]> {
     return rows.map(rowToMeta)
   }
   const like = `%${q}%`
+  // SQLite-compatible search (no ILIKE, no = ANY())
   const rows = await sql`
-    SELECT *,
-      (CASE WHEN LOWER(name) = LOWER(${q})      THEN 30 ELSE 0 END +
-       CASE WHEN LOWER(name) LIKE LOWER(${q+'%'}) THEN 15 ELSE 0 END +
-       CASE WHEN LOWER(name) LIKE LOWER(${like}) THEN 10 ELSE 0 END +
-       CASE WHEN LOWER(description) LIKE LOWER(${like}) THEN 3 ELSE 0 END +
-       CASE WHEN ${q} = ANY(keywords)             THEN 5 ELSE 0 END) AS score
-    FROM packages
+    SELECT * FROM packages
     WHERE LOWER(name) LIKE LOWER(${like})
        OR LOWER(description) LIKE LOWER(${like})
-       OR ${q} ILIKE ANY(keywords)
-    ORDER BY score DESC, total_downloads DESC
+       OR LOWER(keywords) LIKE LOWER(${like})
+    ORDER BY
+      CASE WHEN LOWER(name) = LOWER(${q}) THEN 0
+           WHEN LOWER(name) LIKE LOWER(${q + '%'}) THEN 1
+           ELSE 2 END,
+      total_downloads DESC
   `
   return rows.map(rowToMeta)
 }
 
 export async function upsertPackage(meta: PackageMeta): Promise<void> {
+  const kw  = JSON.stringify(meta.keywords)
+  const cls = JSON.stringify(meta.classifiers ?? [])
   await sql`
     INSERT INTO packages (name, owner, description, latest, license, homepage, repository,
                           keywords, classifiers, total_downloads, created_at, updated_at)
     VALUES (${meta.name}, ${meta.owner}, ${meta.description}, ${meta.latest}, ${meta.license},
             ${meta.homepage ?? null}, ${meta.repository ?? null},
-            ${meta.keywords}, ${meta.classifiers ?? []},
+            ${kw}, ${cls},
             ${meta.total_downloads}, ${meta.created_at}, ${meta.updated_at})
     ON CONFLICT (name) DO UPDATE SET
-      owner        = EXCLUDED.owner,
-      description  = EXCLUDED.description,
-      latest       = EXCLUDED.latest,
-      license      = EXCLUDED.license,
-      homepage     = EXCLUDED.homepage,
-      repository   = EXCLUDED.repository,
-      keywords     = EXCLUDED.keywords,
-      classifiers  = EXCLUDED.classifiers,
-      updated_at   = EXCLUDED.updated_at
+      owner        = excluded.owner,
+      description  = excluded.description,
+      latest       = excluded.latest,
+      license      = excluded.license,
+      homepage     = excluded.homepage,
+      repository   = excluded.repository,
+      keywords     = excluded.keywords,
+      classifiers  = excluded.classifiers,
+      updated_at   = excluded.updated_at
   `
 }
 
 export async function insertPackageVersion(ver: PackageVersion): Promise<void> {
+  const kw  = JSON.stringify(ver.keywords)
+  const cls = JSON.stringify(ver.classifiers ?? [])
+  const dep = JSON.stringify(ver.dependencies)
+  const dev = JSON.stringify(ver.dev_dependencies ?? {})
   await sql`
     INSERT INTO package_versions
       (name, version, description, author, author_email, license, homepage, repository,
@@ -141,19 +157,17 @@ export async function insertPackageVersion(ver: PackageVersion): Promise<void> {
     VALUES
       (${ver.name}, ${ver.version}, ${ver.description}, ${ver.author}, ${ver.author_email ?? null},
        ${ver.license}, ${ver.homepage ?? null}, ${ver.repository ?? null},
-       ${ver.keywords}, ${ver.classifiers ?? []}, ${ver.requires_omnikarai ?? null},
-       ${JSON.stringify(ver.dependencies)}, ${JSON.stringify(ver.dev_dependencies ?? {})},
+       ${kw}, ${cls}, ${ver.requires_omnikarai ?? null},
+       ${dep}, ${dev},
        ${ver.readme ?? ''}, ${ver.changelog ?? ''}, ${ver.file_size ?? null}, ${ver.file_hash ?? null},
-       ${ver.yanked}, ${ver.yank_reason ?? null}, ${ver.published_at}, ${ver.published_by})
+       ${ver.yanked ? 1 : 0}, ${ver.yank_reason ?? null}, ${ver.published_at}, ${ver.published_by})
     ON CONFLICT (name, version) DO NOTHING
   `
 }
 
 export async function updateVersionYank(name: string, version: string, yanked: boolean, reason?: string): Promise<void> {
-  await sql`
-    UPDATE package_versions SET yanked = ${yanked}, yank_reason = ${reason ?? null}
-    WHERE name = ${name} AND version = ${version}
-  `
+  await sql`UPDATE package_versions SET yanked = ${yanked ? 1 : 0}, yank_reason = ${reason ?? null}
+            WHERE name = ${name} AND version = ${version}`
 }
 
 export async function deletePackage(name: string): Promise<void> {
@@ -161,5 +175,4 @@ export async function deletePackage(name: string): Promise<void> {
   await sql`DELETE FROM packages WHERE name = ${name}`
 }
 
-// seedIfEmpty is now handled by /api/migrate — no-op here
-export async function seedIfEmpty(): Promise<void> {}
+export async function seedIfEmpty(): Promise<void> {} // handled by /api/migrate

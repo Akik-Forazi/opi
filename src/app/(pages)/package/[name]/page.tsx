@@ -1,29 +1,30 @@
+// app/(pages)/package/[name]/page.tsx — GitHub-style package page
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
-import { getPackage, getPackageVersion, getPackageVersions, seedIfEmpty } from '@/lib/packages'
-import { Download, ExternalLink, Github, Tag, User, Calendar, AlertTriangle, Terminal } from 'lucide-react'
+import { getPackage, getPackageVersion, getPackageVersions } from '@/lib/packages'
+import {
+  Download, ExternalLink, Github, Tag, User, Calendar,
+  AlertTriangle, Terminal, GitBranch, BookOpen, Package, Clock
+} from 'lucide-react'
 
 type Props = { params: { name: string } }
 
 function fmt(n: number) {
-  if (n >= 1000000) return (n/1000000).toFixed(1)+'M'
-  if (n >= 1000) return (n/1000).toFixed(1)+'k'
+  if (n >= 1_000_000) return (n/1_000_000).toFixed(1)+'M'
+  if (n >= 1_000) return (n/1_000).toFixed(1)+'k'
   return String(n)
 }
-
 function elapsed(iso: string) {
   const ms = Date.now() - new Date(iso).getTime()
   const d = Math.floor(ms/86400000)
-  if (d === 0) return 'today'
-  if (d === 1) return 'yesterday'
-  if (d < 30) return `${d} days ago`
+  if (d === 0) return 'today'; if (d === 1) return 'yesterday'
+  if (d < 30)  return `${d} days ago`
   if (d < 365) return `${Math.floor(d/30)} months ago`
   return `${Math.floor(d/365)} years ago`
 }
 
 function renderReadme(md: string) {
-  // Very minimal markdown → HTML (no deps)
   return md
     .replace(/^### (.+)$/gm, '<h3>$1</h3>')
     .replace(/^## (.+)$/gm,  '<h2>$1</h2>')
@@ -34,9 +35,8 @@ function renderReadme(md: string) {
     .replace(/\*([^*]+)\*/g, '<em>$1</em>')
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
     .replace(/^- (.+)$/gm, '<li>$1</li>')
-    .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>')
+    .replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>')
     .replace(/\n\n/g, '</p><p>')
-    .replace(/^(?!<[hupla])/gm, '<p>')
 }
 
 export async function generateMetadata({ params }: Props) {
@@ -46,138 +46,232 @@ export async function generateMetadata({ params }: Props) {
 }
 
 export default async function PackagePage({ params }: Props) {
-  await seedIfEmpty()
   const meta = await getPackage(params.name)
   if (!meta) notFound()
 
   const versions = await getPackageVersions(params.name)
   const latest   = await getPackageVersion(params.name, meta.latest)
+  const hasDeps  = Object.keys(latest?.dependencies || {}).length > 0
 
   return (
     <>
       <Navbar />
-      <div className="max-w-7xl mx-auto px-4 py-8 grid lg:grid-cols-[1fr_300px] gap-8">
 
-        {/* Main */}
-        <div>
-          {/* Header */}
-          <div className="mb-6">
-            <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-2xl font-extrabold">{meta.name}</h1>
-              <span className="text-lg text-[#6b7280]">v{meta.latest}</span>
-              {latest?.yanked && (
-                <span className="flex items-center gap-1 px-2 py-0.5 bg-[#f06060]/10 border border-[#f06060]/30 rounded text-xs text-[#f06060]">
-                  <AlertTriangle size={11} /> Yanked
-                </span>
-              )}
-            </div>
-            <p className="text-[#6b7280] text-lg">{meta.description}</p>
+      {/* ── breadcrumb / title bar ── */}
+      <div className="border-b border-[#252936] bg-[#0d0f14]">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-center gap-2 text-sm text-[#6b7280] mb-3">
+            <Link href="/" className="hover:text-[#7c6af7] transition-colors">OPI</Link>
+            <span>/</span>
+            <Link href={`/user/${meta.owner}`} className="hover:text-[#7c6af7] transition-colors">
+              {meta.owner}
+            </Link>
+            <span>/</span>
+            <span className="text-[#e2e4ed] font-semibold">{meta.name}</span>
           </div>
 
-          {/* Install box */}
-          <div className="bg-[#13161e] border border-[#252936] rounded-xl p-4 mb-6">
-            <div className="flex items-center gap-2 mb-2">
-              <Terminal size={14} className="text-[#7c6af7]" />
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Package size={18} className="text-[#7c6af7]" />
+              <h1 className="text-xl font-extrabold">{meta.name}</h1>
+            </div>
+            <span className="px-2 py-0.5 text-xs bg-[#7c6af7]/10 border border-[#7c6af7]/30 text-[#a89cf9] rounded-full font-mono">
+              v{meta.latest}
+            </span>
+            {latest?.yanked && (
+              <span className="flex items-center gap-1 px-2 py-0.5 bg-[#f06060]/10 border border-[#f06060]/30 rounded-full text-xs text-[#f06060]">
+                <AlertTriangle size={10}/> Yanked
+              </span>
+            )}
+            <span className="px-2 py-0.5 text-xs bg-[#1a1e28] border border-[#252936] text-[#6b7280] rounded-full">
+              {meta.license}
+            </span>
+          </div>
+
+          <p className="text-[#6b7280] mt-2 text-sm max-w-2xl">{meta.description}</p>
+
+          {/* keywords */}
+          {meta.keywords?.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-3">
+              {meta.keywords.map(k => (
+                <Link key={k} href={`/search?q=${encodeURIComponent(k)}`}
+                  className="text-xs bg-[#7c6af7]/10 hover:bg-[#7c6af7]/20 border border-[#7c6af7]/20 px-2.5 py-0.5 rounded-full text-[#a89cf9] transition-colors">
+                  {k}
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── tab bar ── */}
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex gap-0 -mb-px">
+            {[
+              { id:'readme',   icon: BookOpen,   label:'README' },
+              { id:'versions', icon: GitBranch,  label:`Versions (${versions.length})` },
+              { id:'deps',     icon: Package,    label:`Dependencies${hasDeps ? ` (${Object.keys(latest!.dependencies).length})` : ''}` },
+            ].map(t => (
+              <a key={t.id} href={`#${t.id}`}
+                className="flex items-center gap-1.5 px-4 py-2.5 text-sm text-[#6b7280] hover:text-[#e2e4ed] border-b-2 border-transparent hover:border-[#7c6af7]/50 transition-colors">
+                <t.icon size={13}/>{t.label}
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── main content ── */}
+      <div className="max-w-7xl mx-auto px-4 py-8 grid lg:grid-cols-[1fr_280px] gap-8">
+
+        {/* Left */}
+        <div className="space-y-6">
+
+          {/* install box */}
+          <div className="bg-[#13161e] border border-[#252936] rounded-xl overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-[#252936]">
+              <Terminal size={13} className="text-[#7c6af7]"/>
               <span className="text-sm font-semibold">Install</span>
             </div>
-            <div className="font-mono text-sm bg-[#0a0c10] rounded-lg px-4 py-2.5 text-[#56d3a0] select-all">
+            <div className="px-4 py-3 font-mono text-sm text-[#56d3a0] select-all bg-[#0a0c10]">
               omnip install {meta.name}
             </div>
-            {latest && Object.keys(latest.dependencies || {}).length > 0 && (
-              <p className="text-xs text-[#6b7280] mt-2">
-                Requires: {Object.entries(latest.dependencies).map(([k,v]) => `${k} ${v}`).join(', ')}
-              </p>
-            )}
           </div>
 
           {/* README */}
-          <div className="bg-[#13161e] border border-[#252936] rounded-xl p-6">
-            <h2 className="font-semibold mb-4 text-sm text-[#6b7280] uppercase tracking-wide">README</h2>
-            {latest?.readme ? (
-              <div className="prose-opi" dangerouslySetInnerHTML={{ __html: renderReadme(latest.readme) }} />
+          <div id="readme" className="bg-[#13161e] border border-[#252936] rounded-xl overflow-hidden">
+            <div className="flex items-center gap-2 px-5 py-3 border-b border-[#252936]">
+              <BookOpen size={13} className="text-[#6b7280]"/>
+              <span className="text-sm font-semibold text-[#6b7280] uppercase tracking-wide">README</span>
+            </div>
+            <div className="p-6">
+              {latest?.readme ? (
+                <div className="prose-opi" dangerouslySetInnerHTML={{ __html: renderReadme(latest.readme) }} />
+              ) : (
+                <p className="text-[#6b7280] text-sm italic">No README provided.</p>
+              )}
+            </div>
+          </div>
+
+          {/* Versions */}
+          <div id="versions" className="bg-[#13161e] border border-[#252936] rounded-xl overflow-hidden">
+            <div className="flex items-center gap-2 px-5 py-3 border-b border-[#252936]">
+              <GitBranch size={13} className="text-[#6b7280]"/>
+              <span className="text-sm font-semibold text-[#6b7280] uppercase tracking-wide">
+                Version History ({versions.length})
+              </span>
+            </div>
+            <div className="divide-y divide-[#252936]">
+              {[...versions].reverse().map(v => (
+                <div key={v} className={`flex items-center justify-between px-5 py-3 ${v === meta.latest ? 'bg-[#7c6af7]/5' : 'hover:bg-[#1a1e28]'} transition-colors`}>
+                  <div className="flex items-center gap-3">
+                    <span className={`font-mono text-sm ${v === meta.latest ? 'text-[#a89cf9]' : 'text-[#6b7280]'}`}>{v}</span>
+                    {v === meta.latest && (
+                      <span className="text-xs px-2 py-0.5 bg-[#7c6af7]/20 text-[#a89cf9] rounded-full">latest</span>
+                    )}
+                  </div>
+                  <span className="text-xs text-[#6b7280]">
+                    <code className="bg-[#0a0c10] px-2 py-0.5 rounded">omnip install {meta.name}@{v}</code>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Dependencies */}
+          <div id="deps" className="bg-[#13161e] border border-[#252936] rounded-xl overflow-hidden">
+            <div className="flex items-center gap-2 px-5 py-3 border-b border-[#252936]">
+              <Package size={13} className="text-[#6b7280]"/>
+              <span className="text-sm font-semibold text-[#6b7280] uppercase tracking-wide">Dependencies</span>
+            </div>
+            {hasDeps ? (
+              <div className="divide-y divide-[#252936]">
+                {Object.entries(latest!.dependencies).map(([dep, ver]) => (
+                  <div key={dep} className="flex items-center justify-between px-5 py-3 hover:bg-[#1a1e28] transition-colors">
+                    <Link href={`/package/${dep}`} className="text-sm text-[#7c6af7] hover:text-[#a89cf9] font-mono">{dep}</Link>
+                    <span className="text-xs text-[#6b7280] font-mono">{ver}</span>
+                  </div>
+                ))}
+              </div>
             ) : (
-              <p className="text-[#6b7280] text-sm italic">No README provided.</p>
+              <div className="px-5 py-8 text-center text-sm text-[#6b7280]">No dependencies</div>
             )}
           </div>
 
           {/* Changelog */}
           {latest?.changelog && (
-            <div className="bg-[#13161e] border border-[#252936] rounded-xl p-6 mt-4">
-              <h2 className="font-semibold mb-4 text-sm text-[#6b7280] uppercase tracking-wide">Changelog</h2>
-              <div className="prose-opi" dangerouslySetInnerHTML={{ __html: renderReadme(latest.changelog) }} />
+            <div className="bg-[#13161e] border border-[#252936] rounded-xl overflow-hidden">
+              <div className="flex items-center gap-2 px-5 py-3 border-b border-[#252936]">
+                <Clock size={13} className="text-[#6b7280]"/>
+                <span className="text-sm font-semibold text-[#6b7280] uppercase tracking-wide">Changelog</span>
+              </div>
+              <div className="p-6">
+                <div className="prose-opi" dangerouslySetInnerHTML={{ __html: renderReadme(latest.changelog) }} />
+              </div>
             </div>
           )}
         </div>
 
         {/* Sidebar */}
         <div className="space-y-4">
-
-          {/* Meta */}
-          <div className="bg-[#13161e] border border-[#252936] rounded-xl p-4 space-y-3 text-sm">
-            <Row icon={<User size={13}/>} label="Owner">
-              <Link href={`/user/${meta.owner}`} className="text-[#7c6af7] hover:text-[#a89cf9]">@{meta.owner}</Link>
-            </Row>
-            <Row icon={<Download size={13}/>} label="Downloads">
-              <span>{fmt(meta.total_downloads)}</span>
-            </Row>
-            <Row icon={<Calendar size={13}/>} label="Updated">
-              <span>{elapsed(meta.updated_at)}</span>
-            </Row>
-            <Row icon={<Tag size={13}/>} label="License">
-              <span>{meta.license}</span>
-            </Row>
+          {/* Meta card */}
+          <div className="bg-[#13161e] border border-[#252936] rounded-xl p-4 space-y-3">
+            <SideRow icon={<User size={12}/>} label="Owner">
+              <Link href={`/user/${meta.owner}`} className="text-[#7c6af7] hover:text-[#a89cf9] text-sm">@{meta.owner}</Link>
+            </SideRow>
+            <SideRow icon={<Download size={12}/>} label="Downloads">
+              <span className="text-sm">{fmt(meta.total_downloads)}</span>
+            </SideRow>
+            <SideRow icon={<Calendar size={12}/>} label="Updated">
+              <span className="text-sm">{elapsed(meta.updated_at)}</span>
+            </SideRow>
+            <SideRow icon={<Tag size={12}/>} label="License">
+              <span className="text-sm">{meta.license}</span>
+            </SideRow>
             {meta.homepage && (
-              <Row icon={<ExternalLink size={13}/>} label="Homepage">
-                <a href={meta.homepage} target="_blank" rel="noopener noreferrer" className="text-[#7c6af7] hover:text-[#a89cf9] truncate max-w-[160px] block">
+              <SideRow icon={<ExternalLink size={12}/>} label="Homepage">
+                <a href={meta.homepage} target="_blank" rel="noopener noreferrer"
+                  className="text-sm text-[#7c6af7] hover:text-[#a89cf9] truncate max-w-[160px] block">
                   {meta.homepage.replace(/^https?:\/\//, '')}
                 </a>
-              </Row>
+              </SideRow>
             )}
             {meta.repository && (
-              <Row icon={<Github size={13}/>} label="Repository">
-                <a href={meta.repository} target="_blank" rel="noopener noreferrer" className="text-[#7c6af7] hover:text-[#a89cf9] truncate max-w-[160px] block">
+              <SideRow icon={<Github size={12}/>} label="Repo">
+                <a href={meta.repository} target="_blank" rel="noopener noreferrer"
+                  className="text-sm text-[#7c6af7] hover:text-[#a89cf9] truncate max-w-[160px] block">
                   {meta.repository.replace(/^https?:\/\/(www\.|github\.com\/)?/, '')}
                 </a>
-              </Row>
+              </SideRow>
             )}
           </div>
 
-          {/* Keywords */}
-          {meta.keywords?.length > 0 && (
-            <div className="bg-[#13161e] border border-[#252936] rounded-xl p-4">
-              <h3 className="text-xs text-[#6b7280] uppercase tracking-wide mb-3 font-semibold">Keywords</h3>
-              <div className="flex flex-wrap gap-1.5">
-                {meta.keywords.map(k => (
-                  <Link key={k} href={`/search?q=${encodeURIComponent(k)}`}
-                    className="text-xs bg-[#1a1e28] hover:bg-[#252936] border border-[#252936] px-2.5 py-1 rounded-full text-[#a89cf9] transition-colors">
-                    {k}
-                  </Link>
-                ))}
+          {/* API box */}
+          <div className="bg-[#13161e] border border-[#252936] rounded-xl p-4">
+            <h3 className="text-xs text-[#6b7280] uppercase tracking-wide font-semibold mb-3">API</h3>
+            <div className="space-y-1.5 text-xs font-mono">
+              <div className="flex items-start gap-2">
+                <span className="text-[#56d3a0] shrink-0">GET</span>
+                <code className="text-[#6b7280] break-all">/api/packages/{meta.name}</code>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-[#56d3a0] shrink-0">GET</span>
+                <code className="text-[#6b7280] break-all">/api/packages/{meta.name}?v={meta.latest}</code>
               </div>
             </div>
-          )}
+          </div>
 
-          {/* Versions */}
+          {/* Install versions box */}
           <div className="bg-[#13161e] border border-[#252936] rounded-xl p-4">
-            <h3 className="text-xs text-[#6b7280] uppercase tracking-wide mb-3 font-semibold">
-              Versions ({versions.length})
+            <h3 className="text-xs text-[#6b7280] uppercase tracking-wide font-semibold mb-3">
+              Quick install
             </h3>
-            <div className="space-y-1 max-h-48 overflow-y-auto">
-              {[...versions].reverse().map(v => (
-                <div key={v} className={`flex items-center justify-between text-sm px-2 py-1 rounded ${v === meta.latest ? 'bg-[#7c6af7]/10 text-[#a89cf9]' : 'text-[#6b7280] hover:bg-[#1a1e28]'}`}>
-                  <span className="font-mono">{v}</span>
-                  {v === meta.latest && <span className="text-xs">latest</span>}
+            <div className="space-y-1.5">
+              {[...versions].reverse().slice(0, 4).map(v => (
+                <div key={v} className="font-mono text-xs bg-[#0a0c10] border border-[#252936] rounded px-3 py-1.5 flex justify-between">
+                  <span className="text-[#56d3a0]">omnip install {meta.name}@{v}</span>
                 </div>
               ))}
             </div>
-          </div>
-
-          {/* API link */}
-          <div className="bg-[#13161e] border border-[#252936] rounded-xl p-4">
-            <h3 className="text-xs text-[#6b7280] uppercase tracking-wide mb-3 font-semibold">API</h3>
-            <code className="text-xs text-[#56d3a0] break-all">
-              GET /api/packages/{meta.name}
-            </code>
           </div>
         </div>
       </div>
@@ -185,12 +279,12 @@ export default async function PackagePage({ params }: Props) {
   )
 }
 
-function Row({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
+function SideRow({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-2">
       <span className="text-[#6b7280] shrink-0">{icon}</span>
-      <span className="text-[#6b7280] shrink-0 w-20">{label}</span>
-      <span className="text-[#e2e4ed] min-w-0">{children}</span>
+      <span className="text-[#6b7280] shrink-0 w-16 text-xs">{label}</span>
+      <span className="text-[#e2e4ed] min-w-0 flex-1">{children}</span>
     </div>
   )
 }
