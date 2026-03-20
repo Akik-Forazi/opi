@@ -1,0 +1,10 @@
+{
+  "name": "opi",
+  "version": "1.0.0",
+  "description": "OPI — Omnikarai Package Index",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {}
+}
