@@ -1,8 +1,6 @@
 // POST /api/auth/register
 import { NextRequest, NextResponse } from 'next/server'
-import { kv, KEYS } from '@/lib/kv'
-import { hashPassword, signJWT } from '@/lib/auth'
-import type { UserRecord } from '@/lib/types'
+import { hashPassword, signJWT, getUserByUsername, getUserByEmail, createUser } from '@/lib/auth'
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,29 +15,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 })
 
     const uname = username.toLowerCase()
-    if (await kv.get(KEYS.user(uname)))
+    if (await getUserByUsername(uname))
       return NextResponse.json({ error: 'Username already taken' }, { status: 409 })
-    if (await kv.get(KEYS.userByEmail(email)))
+    if (await getUserByEmail(email))
       return NextResponse.json({ error: 'Email already registered' }, { status: 409 })
 
-    const user: UserRecord = {
-      username: uname, email: email.toLowerCase(),
-      password: await hashPassword(password),
+    await createUser({
+      username:     uname,
+      email:        email.toLowerCase(),
+      password:     await hashPassword(password),
       display_name: display_name || uname,
-      bio: '', joined_at: new Date().toISOString(),
-      api_tokens: [], packages: [], is_verified: false,
-    }
-    await kv.set(KEYS.user(uname), user)
-    await kv.set(KEYS.userByEmail(user.email), uname)
+      bio:          '',
+      website:      '',
+      joined_at:    new Date().toISOString(),
+      is_verified:  false,
+      packages:     [],
+    })
 
     const token = await signJWT({ username: uname })
     const res = NextResponse.json(
-      { user: { username: uname, email: user.email, display_name: user.display_name }, token },
+      { user: { username: uname, email: email.toLowerCase(), display_name: display_name || uname }, token },
       { status: 201 }
     )
     res.cookies.set('opi_token', token, { httpOnly: true, secure: true, sameSite: 'lax', maxAge: 2592000 })
     return res
-  } catch {
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e)
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }

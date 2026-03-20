@@ -1,13 +1,12 @@
-// lib/auth.ts — JWT + bcrypt auth helpers
+// lib/auth.ts — JWT + bcrypt + Neon DB
 import bcrypt from 'bcryptjs'
 import { SignJWT, jwtVerify } from 'jose'
-import { kv, KEYS } from './kv'
+import { sql } from './db'
 import type { UserRecord } from './types'
 
 const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'opi-dev-secret-change-in-production-please'
+  process.env.JWT_SECRET || 'opi-dev-secret-change-in-production'
 )
-const JWT_EXPIRY = '30d'
 
 export async function hashPassword(plain: string): Promise<string> {
   return bcrypt.hash(plain, 12)
@@ -21,7 +20,7 @@ export async function signJWT(payload: { username: string }): Promise<string> {
   return new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime(JWT_EXPIRY)
+    .setExpirationTime('30d')
     .sign(JWT_SECRET)
 }
 
@@ -41,7 +40,6 @@ export function generateApiToken(): string {
   return 'opi_' + Array.from(arr).map(b => chars[b % chars.length]).join('')
 }
 
-// Extract JWT from Authorization header or cookie
 export function extractBearerToken(req: Request): string | null {
   const auth = req.headers.get('authorization')
   if (auth?.startsWith('Bearer ')) return auth.slice(7)
@@ -50,25 +48,84 @@ export function extractBearerToken(req: Request): string | null {
   return match ? match[1] : null
 }
 
-// Validate API token (for omnip publish)
-export async function validateApiToken(token: string): Promise<UserRecord | null> {
-  if (!token.startsWith('opi_')) return null
-  const username = await kv.get<string>(KEYS.apiToken(token))
-  if (!username) return null
-  return kv.get<UserRecord>(KEYS.user(username))
+// ─── DB helpers ───────────────────────────────────────────────
+
+function rowToUser(r: Record<string, unknown>): UserRecord {
+  return {
+    username:     r.username as string,
+    email:        r.email as string,
+    password:     r.password as string,
+    display_name: r.display_name as string | undefined,
+    bio:          r.bio as string,
+    website:      r.website as string,
+    joined_at:    r.joined_at as string,
+    is_verified:  Boolean(r.is_verified),
+    api_tokens:   [],   // loaded separately when needed
+    packages:     (r.packages as string[]) || [],
+  }
 }
 
-// Get current user from request
+export async function getUserByUsername(username: string): Promise<UserRecord | null> {
+  const rows = await sql`SELECT * FROM users WHERE username = ${username.toLowerCase()} LIMIT 1`
+  return rows.length ? rowToUser(rows[0]) : null
+}
+
+export async function getUserByEmail(email: string): Promise<UserRecord | null> {
+  const rows = await sql`SELECT * FROM users WHERE email = ${email.toLowerCase()} LIMIT 1`
+  return rows.length ? rowToUser(rows[0]) : null
+}
+
+export async function createUser(user: Omit<UserRecord, 'api_tokens'>): Promise<void> {
+  await sql`
+    INSERT INTO users (username, email, password, display_name, bio, website, joined_at, is_verified, packages)
+    VALUES (${user.username}, ${user.email}, ${user.password}, ${user.display_name ?? null},
+            ${user.bio ?? ''}, ${user.website ?? ''}, ${user.joined_at}, ${user.is_verified}, ${user.packages ?? []})
+  `
+}
+
+export async function updateUser(username: string, fields: Partial<UserRecord>): Promise<void> {
+  if (fields.display_name !== undefined || fields.bio !== undefined || fields.website !== undefined) {
+    await sql`
+      UPDATE users SET
+        display_name = COALESCE(${fields.display_name ?? null}, display_name),
+        bio          = COALESCE(${fields.bio ?? null}, bio),
+        website      = COALESCE(${fields.website ?? null}, website)
+      WHERE username = ${username}
+    `
+  }
+  if (fields.packages !== undefined) {
+    await sql`UPDATE users SET packages = ${fields.packages} WHERE username = ${username}`
+  }
+}
+
+export async function getUserTokens(username: string): Promise<Array<{ token: string; label: string; created_at: string }>> {
+  const rows = await sql`SELECT token, label, created_at FROM api_tokens WHERE username = ${username} ORDER BY created_at DESC`
+  return rows as Array<{ token: string; label: string; created_at: string }>
+}
+
+export async function createApiToken(username: string, token: string, label = 'default'): Promise<void> {
+  await sql`INSERT INTO api_tokens (token, username, label) VALUES (${token}, ${username}, ${label})`
+}
+
+export async function revokeApiToken(username: string, token: string): Promise<void> {
+  await sql`DELETE FROM api_tokens WHERE username = ${username} AND token = ${token}`
+}
+
+export async function getUserByApiToken(token: string): Promise<UserRecord | null> {
+  const rows = await sql`SELECT username FROM api_tokens WHERE token = ${token} LIMIT 1`
+  if (!rows.length) return null
+  return getUserByUsername(rows[0].username as string)
+}
+
+export async function validateApiToken(token: string): Promise<UserRecord | null> {
+  if (!token.startsWith('opi_')) return null
+  return getUserByApiToken(token)
+}
+
 export async function getCurrentUser(req: Request): Promise<UserRecord | null> {
   const token = extractBearerToken(req)
   if (!token) return null
-
-  // Try JWT first
   const jwtPayload = await verifyJWT(token)
-  if (jwtPayload) {
-    return kv.get<UserRecord>(KEYS.user(jwtPayload.username))
-  }
-
-  // Try API token
+  if (jwtPayload) return getUserByUsername(jwtPayload.username)
   return validateApiToken(token)
 }
