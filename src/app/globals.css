@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg:       #0d0f14;
+  --bg2:      #13161e;
+  --bg3:      #1a1e28;
+  --border:   #252936;
+  --accent:   #7c6af7;
+  --accent2:  #56d3a0;
+  --yellow:   #f5c842;
+  --red:      #f06060;
+  --text:     #e2e4ed;
+  --muted:    #6b7280;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; }
+
+.mono { font-family: 'Cascadia Code', 'Fira Code', monospace; }
+
+/* Code blocks */
+.code-pill {
+  @apply font-mono text-sm bg-[#0a0c10] border border-[#252936] rounded px-2 py-0.5;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+/* Prose for readme */
+.prose-opi h1, .prose-opi h2, .prose-opi h3 { color: var(--text); margin: 1.5rem 0 0.5rem; }
+.prose-opi h1 { font-size: 1.6rem; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; }
+.prose-opi h2 { font-size: 1.25rem; }
+.prose-opi h3 { font-size: 1.05rem; }
+.prose-opi p  { color: var(--muted); line-height: 1.75; margin-bottom: 0.8rem; }
+.prose-opi a  { color: var(--accent); text-decoration: underline; }
+.prose-opi code { font-family: monospace; background: #0a0c10; border: 1px solid var(--border); border-radius: 4px; padding: 0.1em 0.4em; font-size: 0.875em; }
+.prose-opi pre { background: #0a0c10; border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.2rem; overflow-x: auto; margin: 1rem 0; }
+.prose-opi pre code { background: none; border: none; padding: 0; }
+.prose-opi ul, .prose-opi ol { color: var(--muted); padding-left: 1.5rem; margin-bottom: 0.8rem; }
+.prose-opi li { margin-bottom: 0.25rem; }
+.prose-opi table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+.prose-opi th { background: var(--bg3); color: var(--text); padding: 0.5rem 0.8rem; text-align: left; border: 1px solid var(--border); }
+.prose-opi td { padding: 0.5rem 0.8rem; border: 1px solid var(--border); color: var(--muted); }
+.prose-opi blockquote { border-left: 3px solid var(--accent); padding-left: 1rem; color: var(--muted); margin: 1rem 0; }
