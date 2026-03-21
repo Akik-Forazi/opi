@@ -10,7 +10,9 @@ function cors(res) {
 module.exports = async function handler(req, res) {
   cors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  const name = req.query.name;
+  // Vercel populates req.query.name from the [name] filename, but also
+  // falls back to extracting it from the URL path for rewrite-based routing
+  const name = req.query.name || req.url.split('/').filter(Boolean).pop()?.split('?')[0];
 
   if (req.method === 'GET') {
     const rows = await sql`SELECT * FROM packages WHERE name = ${name} LIMIT 1`;

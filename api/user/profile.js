@@ -41,7 +41,7 @@ module.exports = async function handler(req, res) {
 
   // GET /api/user/:username — public profile + their packages
   if (req.method === 'GET') {
-    const uname = req.query.username;
+    const uname = req.query.username || req.url.split('/').filter(Boolean).pop()?.split('?')[0];
     if (!uname) return res.status(400).json({ error: 'username required' });
     const rows = await sql`SELECT username, display_name, bio, website, joined_at, packages FROM users WHERE username=${uname.toLowerCase()} LIMIT 1`;
     if (!rows.length) return res.status(404).json({ error: 'User not found' });
