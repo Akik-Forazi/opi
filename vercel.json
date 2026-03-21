@@ -1,15 +1,26 @@
 {
   "version": 2,
   "rewrites": [
-    { "source": "/package/:name", "destination": "/public/package.html" },
-    { "source": "/user/:name",    "destination": "/public/user.html" },
-    { "source": "/search",        "destination": "/public/search.html" },
-    { "source": "/login",         "destination": "/public/login.html" },
-    { "source": "/register",      "destination": "/public/register.html" },
-    { "source": "/dashboard",     "destination": "/public/dashboard.html" },
-    { "source": "/settings",      "destination": "/public/settings.html" },
-    { "source": "/help",          "destination": "/public/help.html" },
-    { "source": "/",              "destination": "/public/index.html" }
+    { "source": "/api/auth/register",    "destination": "/api/auth/register.js" },
+    { "source": "/api/auth/login",       "destination": "/api/auth/login.js" },
+    { "source": "/api/auth/logout",      "destination": "/api/auth/logout.js" },
+    { "source": "/api/auth/me",          "destination": "/api/auth/me.js" },
+    { "source": "/api/user/tokens",      "destination": "/api/user/tokens.js" },
+    { "source": "/api/user/profile",     "destination": "/api/user/profile.js" },
+    { "source": "/api/user/:username",   "destination": "/api/user/profile.js?username=$username" },
+    { "source": "/api/packages/:name",   "destination": "/api/packages/[name].js?name=$name" },
+    { "source": "/api/packages",         "destination": "/api/packages.js" },
+    { "source": "/api/stats",            "destination": "/api/stats.js" },
+    { "source": "/api/migrate",          "destination": "/api/migrate/index.js" },
+    { "source": "/package/:name",        "destination": "/public/package.html" },
+    { "source": "/user/:name",           "destination": "/public/user.html" },
+    { "source": "/search",              "destination": "/public/search.html" },
+    { "source": "/login",               "destination": "/public/login.html" },
+    { "source": "/register",            "destination": "/public/register.html" },
+    { "source": "/dashboard",           "destination": "/public/dashboard.html" },
+    { "source": "/settings",            "destination": "/public/settings.html" },
+    { "source": "/help",                "destination": "/public/help.html" },
+    { "source": "/",                    "destination": "/public/index.html" }
   ],
   "headers": [
     {
