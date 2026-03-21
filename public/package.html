@@ -1,144 +1,135 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title id="page-title">Package — OPI</title><link rel="stylesheet" href="/public/opi.css"></head>
+<title>Package — OPI</title><link rel="stylesheet" href="/public/opi.css"></head>
 <body>
 <nav class="nav" id="nav"></nav>
-<div id="root"><div class="loading-center" style="height:60vh"><div class="spinner"></div></div></div>
-<footer id="footer"></footer>
+<div id="root"><div class="loading-center" style="height:70vh"><div class="spinner"></div></div></div>
+<footer id="footer" class="footer"></footer>
 <script src="/public/opi.js"></script>
 <script>
-async function pageInit() {
-  const name = location.pathname.split('/').pop();
-  if (!name) { qs('#root').innerHTML='<div class="empty"><h3>No package specified</h3></div>'; return; }
-
-  const { ok, data } = await api(`/packages/${name}`);
-  if (!ok) {
-    qs('#root').innerHTML = `<div class="empty" style="height:60vh">
-      <div class="empty-icon">📦</div>
-      <h3>Package not found</h3>
+async function pageInit(){
+  const name=location.pathname.split('/').filter(Boolean).pop();
+  if(!name){qs('#root').innerHTML='<div class="empty" style="height:60vh"><h3>No package specified</h3></div>';return}
+  const {ok,data:p}=await api(`/packages/${name}`);
+  if(!ok){
+    qs('#root').innerHTML=`<div class="empty" style="height:60vh">
+      <div class="empty-icon">📦</div><h3>Package not found</h3>
       <p>"${esc(name)}" doesn't exist on OPI.</p>
-      <a href="/search" class="btn btn-outline" style="margin-top:1rem">Browse packages</a>
-    </div>`;
-    return;
+      <a href="/search" class="btn btn-ghost" style="margin-top:1rem">Browse packages</a>
+    </div>`;return;
   }
+  document.title=`${p.name} · OPI`;
+  const versions=p.versions||[p.latest];
+  const deps=p.dependencies&&Object.keys(p.dependencies).length>0;
+  const latest=p.latest_release||p;
 
-  const p = data;
-  const versions = p.versions || [p.latest];
-  const hasDeps = p.dependencies && Object.keys(p.dependencies).length > 0;
-  document.title = `${p.name} · OPI`;
-
-  qs('#root').innerHTML = `
-  <!-- breadcrumb -->
-  <div style="border-bottom:1px solid var(--border);background:var(--bg)">
-    <div class="container" style="padding:1rem 1.5rem">
-      <div style="font-size:.82rem;color:var(--muted);margin-bottom:.6rem">
-        <a href="/">OPI</a> / <a href="/user/${esc(p.owner)}">@${esc(p.owner)}</a> /
-        <span style="color:var(--text);font-weight:600">${esc(p.name)}</span>
+  qs('#root').innerHTML=`
+  <!-- Breadcrumb bar -->
+  <div style="border-bottom:1px solid var(--line);background:rgba(4,4,22,.7);position:relative;z-index:1">
+    <div class="wrap" style="padding-top:.75rem;padding-bottom:0">
+      <div style="font-size:.75rem;color:var(--muted);margin-bottom:.5rem;font-family:var(--mono)">
+        <a href="/" style="color:var(--muted)">OPI</a>
+        <span style="margin:0 .35rem;opacity:.4">/</span>
+        <a href="/user/${esc(p.owner)}" style="color:var(--muted)">@${esc(p.owner)}</a>
+        <span style="margin:0 .35rem;opacity:.4">/</span>
+        <span style="color:var(--fg);font-weight:600">${esc(p.name)}</span>
       </div>
-      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;margin-bottom:.6rem">
-        <h1 style="font-size:1.4rem;font-weight:800">${esc(p.name)}</h1>
-        <span class="tag tag-accent" style="font-family:monospace">v${esc(p.latest)}</span>
-        ${p.yanked ? '<span class="tag tag-red">Yanked</span>' : ''}
-        <span class="tag">${esc(p.license || 'MIT')}</span>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin-bottom:.65rem">
+        <h1 style="font-size:1.35rem;font-weight:800;font-family:var(--mono)">${esc(p.name)}</h1>
+        <span class="badge badge-accent" style="font-family:var(--mono)">v${esc(p.latest)}</span>
+        ${p.yanked?'<span class="badge badge-red">Yanked</span>':''}
+        <span class="badge badge-dim">${esc(p.license||'MIT')}</span>
       </div>
-      <p style="color:var(--muted);font-size:.95rem">${esc(p.description)}</p>
-      ${(p.keywords||[]).length ? `<div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.7rem">
-        ${p.keywords.map(k=>`<a href="/search?q=${encodeURIComponent(k)}" class="tag tag-accent">${esc(k)}</a>`).join('')}
-      </div>` : ''}
+      <p style="color:var(--muted);font-size:.88rem;margin-bottom:.75rem;max-width:620px">${esc(p.description)}</p>
+      ${(p.keywords||[]).length?`<div style="display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.75rem">
+        ${p.keywords.map(k=>`<a href="/search?q=${encodeURIComponent(k)}" class="tag">${esc(k)}</a>`).join('')}
+      </div>`:''}
     </div>
   </div>
 
-  <div class="page grid-sidebar">
-    <!-- Main -->
-    <div>
-      <!-- Install box -->
-      <div class="card" style="margin-bottom:1.25rem;overflow:hidden">
-        <div style="display:flex;align-items:center;gap:.5rem;padding:.7rem 1.1rem;
-          border-bottom:1px solid var(--border);font-weight:600;font-size:.88rem">
-          🖥️ Install
+  <div class="page">
+    <div class="layout-2col">
+      <!-- Main -->
+      <div>
+        <!-- Install box -->
+        <div class="panel" style="margin-bottom:1.1rem;overflow:hidden">
+          <div class="panel-hdr">
+            <span class="panel-hdr-left">
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" style="color:var(--accent)"><path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0ZM5 6.75A.75.75 0 0 1 5.75 6h4.5a.75.75 0 0 1 0 1.5h-4.5A.75.75 0 0 1 5 6.75Zm0 2.5a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 0 1.5h-2.5A.75.75 0 0 1 5 9.25Z"/></svg>
+              Install
+            </span>
+          </div>
+          <div style="background:#01010e;padding:.75rem 1.1rem;font-family:var(--mono);font-size:.85rem;color:var(--cyan)">omnip install ${esc(p.name)}</div>
+          ${deps?`<div style="padding:.4rem 1rem .5rem;font-size:.72rem;color:var(--muted)">Requires: ${Object.entries(p.dependencies).map(([k,v])=>`<code class="inline-code">${esc(k)} ${esc(v)}</code>`).join(' ')}</div>`:''}
         </div>
-        <div class="code-block" style="border:none;border-radius:0;margin:0">omnip install ${esc(p.name)}</div>
-        ${hasDeps ? `<div style="padding:.5rem 1.1rem;font-size:.78rem;color:var(--muted)">
-          Requires: ${Object.entries(p.dependencies).map(([k,v])=>`<span class="inline-code">${esc(k)} ${esc(v)}</span>`).join(' ')}
-        </div>` : ''}
-      </div>
 
-      <!-- README -->
-      <div class="card" style="margin-bottom:1.25rem">
-        <div style="padding:.7rem 1.1rem;border-bottom:1px solid var(--border);
-          font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600">
-          README
+        <!-- README -->
+        <div class="panel" style="margin-bottom:1.1rem">
+          <div class="panel-hdr"><span class="panel-hdr-left">README.md</span></div>
+          <div class="prose" style="padding:1.25rem 1.5rem" id="readme-body">
+            ${latest.readme?md(latest.readme):'<p style="color:var(--muted);font-style:italic;font-size:.85rem">No README provided.</p>'}
+          </div>
         </div>
-        <div class="prose" style="padding:1.25rem 1.5rem" id="readme-body">
-          ${p.readme ? md(p.readme) : '<p style="color:var(--muted);font-style:italic">No README provided.</p>'}
-        </div>
-      </div>
 
-      <!-- Version history -->
-      <div class="card" style="margin-bottom:1.25rem">
-        <div style="padding:.7rem 1.1rem;border-bottom:1px solid var(--border);
-          font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600">
-          Version history (${versions.length})
-        </div>
-        <div>
+        <!-- Versions -->
+        <div class="panel" style="margin-bottom:1.1rem">
+          <div class="panel-hdr"><span class="panel-hdr-left">Version history <span class="tab-count">${versions.length}</span></span></div>
           ${[...versions].reverse().map(v=>`
-          <div style="display:flex;align-items:center;justify-content:space-between;
-            padding:.6rem 1.1rem;border-bottom:1px solid var(--border);font-size:.875rem;
-            ${v===p.latest?'background:rgba(124,106,247,.05)':''}">
-            <div style="display:flex;align-items:center;gap:.6rem">
-              <span style="font-family:monospace;${v===p.latest?'color:#a89cf9':'color:var(--muted)'}">${esc(v)}</span>
-              ${v===p.latest?'<span class="tag tag-accent">latest</span>':''}
+          <div class="panel-row" style="${v===p.latest?'background:rgba(124,92,252,.04)':''}">
+            <div style="display:flex;align-items:center;gap:.5rem">
+              <span style="font-family:var(--mono);font-size:.82rem;${v===p.latest?'color:var(--acc-lt)':'color:var(--muted)'}">${esc(v)}</span>
+              ${v===p.latest?'<span class="badge badge-accent">latest</span>':''}
             </div>
-            <code class="inline-code" style="font-size:.75rem">omnip install ${esc(p.name)}@${esc(v)}</code>
+            <code class="inline-code" style="font-size:.7rem">omnip install ${esc(p.name)}@${esc(v)}</code>
           </div>`).join('')}
         </div>
-      </div>
 
-      <!-- Dependencies -->
-      <div class="card">
-        <div style="padding:.7rem 1.1rem;border-bottom:1px solid var(--border);
-          font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600">
-          Dependencies
-        </div>
-        ${hasDeps
-          ? Object.entries(p.dependencies).map(([k,v])=>`
-            <div style="display:flex;align-items:center;justify-content:space-between;
-              padding:.6rem 1.1rem;border-bottom:1px solid var(--border);font-size:.875rem">
-              <a href="/package/${esc(k)}" style="color:var(--accent);font-family:monospace">${esc(k)}</a>
-              <span style="color:var(--muted);font-family:monospace">${esc(v)}</span>
+        <!-- Deps -->
+        <div class="panel">
+          <div class="panel-hdr"><span class="panel-hdr-left">Dependencies</span></div>
+          ${deps
+            ?Object.entries(p.dependencies).map(([k,v])=>`
+            <div class="panel-row">
+              <a href="/package/${esc(k)}" style="font-family:var(--mono);font-size:.82rem;color:var(--accent)">${esc(k)}</a>
+              <span style="font-family:var(--mono);font-size:.75rem;color:var(--muted)">${esc(v)}</span>
             </div>`).join('')
-          : '<div style="padding:1.5rem;text-align:center;color:var(--muted);font-size:.875rem">No dependencies</div>'
-        }
+            :'<div style="padding:1.5rem;text-align:center;color:var(--muted);font-size:.82rem">No dependencies</div>'
+          }
+        </div>
       </div>
-    </div>
 
-    <!-- Sidebar -->
-    <aside>
-      <div class="card card-pad" style="margin-bottom:1rem">
-        <div class="side-row"><span class="lbl">Owner</span>
-          <span class="val"><a href="/user/${esc(p.owner)}">@${esc(p.owner)}</a></span></div>
-        <div class="side-row"><span class="lbl">Downloads</span>
-          <span class="val">${fmt(p.total_downloads)}</span></div>
-        <div class="side-row"><span class="lbl">Updated</span>
-          <span class="val">${elapsed(p.updated_at || p.published_at)}</span></div>
-        <div class="side-row"><span class="lbl">License</span>
-          <span class="val">${esc(p.license || 'MIT')}</span></div>
-        ${p.homepage ? `<div class="side-row"><span class="lbl">Homepage</span>
-          <span class="val"><a href="${esc(p.homepage)}" target="_blank" rel="noopener">
-            ${esc(p.homepage.replace(/^https?:\/\//,'').slice(0,30))}</a></span></div>` : ''}
-        ${p.repository ? `<div class="side-row"><span class="lbl">Repo</span>
-          <span class="val"><a href="${esc(p.repository)}" target="_blank" rel="noopener">
-            ${esc(p.repository.replace(/^https?:\/\/(www\.|github\.com\/)?/,'').slice(0,30))}</a></span></div>` : ''}
-      </div>
-      <div class="card card-pad" style="margin-bottom:1rem">
-        <div style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;
-          color:var(--muted);font-weight:600;margin-bottom:.75rem">API</div>
-        <code style="font-size:.75rem;color:var(--acc2);word-break:break-all;font-family:monospace">
-          GET /api/packages/${esc(p.name)}
-        </code>
-      </div>
-    </aside>
+      <!-- Sidebar -->
+      <aside>
+        <div class="panel" style="margin-bottom:.9rem">
+          <div class="panel-hdr"><span>Package info</span></div>
+          <div style="padding:.25rem 0">
+            <div class="panel-row"><span class="panel-lbl">Owner</span><span class="panel-val"><a href="/user/${esc(p.owner)}">@${esc(p.owner)}</a></span></div>
+            <div class="panel-row"><span class="panel-lbl">Downloads</span><span class="panel-val">${fmt(p.total_downloads)}</span></div>
+            <div class="panel-row"><span class="panel-lbl">Updated</span><span class="panel-val">${elapsed(p.updated_at||p.published_at||new Date().toISOString())}</span></div>
+            <div class="panel-row"><span class="panel-lbl">License</span><span class="panel-val">${esc(p.license||'MIT')}</span></div>
+            ${p.homepage?`<div class="panel-row"><span class="panel-lbl">Homepage</span><span class="panel-val"><a href="${esc(p.homepage)}" target="_blank" rel="noopener">${esc(p.homepage.replace(/^https?:\/\//,'').slice(0,28))}</a></span></div>`:''}
+            ${p.repository?`<div class="panel-row"><span class="panel-lbl">Repo</span><span class="panel-val"><a href="${esc(p.repository)}" target="_blank" rel="noopener">${esc(p.repository.replace(/^https?:\/\/(www\.|github\.com\/)?/,'').slice(0,28))}</a></span></div>`:''}
+          </div>
+        </div>
+        <div class="panel" style="margin-bottom:.9rem">
+          <div class="panel-hdr"><span>API endpoint</span></div>
+          <div style="padding:.65rem .85rem">
+            <div style="font-family:var(--mono);font-size:.72rem;color:var(--cyan);word-break:break-all">GET /api/packages/${esc(p.name)}</div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-hdr"><span>Quick install</span></div>
+          <div style="padding:.65rem .85rem">
+            ${[...versions].reverse().slice(0,4).map(v=>`
+            <div style="font-family:var(--mono);font-size:.72rem;background:rgba(124,92,252,.04);border:1px solid var(--line);
+              border-radius:var(--r-sm);padding:.4rem .75rem;margin-bottom:.4rem;color:var(--cyan);word-break:break-all">
+              omnip install ${esc(p.name)}@${esc(v)}
+            </div>`).join('')}
+          </div>
+        </div>
+      </aside>
+    </div>
   </div>`;
 }
 </script>
