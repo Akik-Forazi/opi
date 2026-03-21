@@ -4,150 +4,125 @@
 <title>Dashboard — OPI</title><link rel="stylesheet" href="/public/opi.css"></head>
 <body>
 <nav class="nav" id="nav"></nav>
-<main class="page">
-  <div id="root"><div class="loading-center" style="height:50vh"><div class="spinner"></div></div></div>
+<main class="page" style="position:relative;z-index:1">
+  <div id="root"><div class="loading-center" style="height:60vh"><div class="spinner"></div></div></div>
 </main>
-<footer id="footer"></footer>
+<footer id="footer" class="footer"></footer>
 <script src="/public/opi.js"></script>
 <script>
-async function pageInit() {
-  if (!Auth.isLoggedIn()) { window.location.href = '/login'; return; }
-  const user = await Auth.fetchUser();
-  if (!user) { window.location.href = '/login'; return; }
+async function pageInit(){
+  if(!Auth.isLoggedIn()){location.href='/login';return}
+  const user=await Auth.fetchUser();
+  if(!user){location.href='/login';return}
 
-  // Load user's packages and tokens in parallel
-  const [pkgsData, tokensData] = await Promise.all([
-    Promise.all((user.packages || []).map(n => api(`/packages/${n}`))),
+  const[pkgsData,tokensData]=await Promise.all([
+    Promise.all((user.packages||[]).map(n=>api(`/packages/${n}`))),
     api('/user/tokens')
   ]);
-  const pkgs   = pkgsData.map(r => r.ok ? r.data : null).filter(Boolean);
-  const tokens = tokensData.ok ? (tokensData.data.tokens || []) : [];
-  const totalDL = pkgs.reduce((s, p) => s + (p.total_downloads || 0), 0);
+  const pkgs=pkgsData.map(r=>r.ok?r.data:null).filter(Boolean);
+  const tokens=tokensData.ok?(tokensData.data.tokens||[]):[];
+  const totalDL=pkgs.reduce((s,p)=>s+(p.total_downloads||0),0);
+  let tab='packages';
 
-  let activeTab = 'packages';
-
-  function render() {
-    qs('#root').innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem">
+  function render(){
+    qs('#root').innerHTML=`
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:.75rem;margin-bottom:1.5rem">
       <div>
-        <h1 style="font-size:1.5rem;font-weight:800">Dashboard</h1>
-        <p style="color:var(--muted);font-size:.875rem;margin-top:.25rem">@${esc(user.username)}</p>
+        <h1 style="font-size:1.4rem;font-weight:800;margin-bottom:.2rem">Dashboard</h1>
+        <p style="color:var(--muted);font-size:.82rem;font-family:var(--mono)">@${esc(user.username)}</p>
       </div>
-      <a href="/settings" class="btn btn-outline btn-sm">Settings</a>
+      <div style="display:flex;gap:.5rem">
+        <a href="/user/${esc(user.username)}" class="btn btn-ghost btn-sm">View profile</a>
+        <a href="/settings" class="btn btn-outline btn-sm">Settings</a>
+      </div>
     </div>
 
-    <!-- stats -->
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:2rem">
-      ${[
-        ['📦', pkgs.length, 'Packages'],
-        ['⬇', fmt(totalDL), 'Downloads'],
-        ['🔑', tokens.length + '/10', 'API Tokens'],
-      ].map(([i,v,l])=>`
-      <div class="card card-pad">
-        <div style="font-size:1.5rem;margin-bottom:.25rem">${i}</div>
-        <div style="font-size:1.6rem;font-weight:800;color:var(--accent)">${v}</div>
-        <div style="font-size:.78rem;color:var(--muted)">${l}</div>
-      </div>`).join('')}
+    <!-- Stats -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-bottom:1.5rem">
+      ${[['📦',pkgs.length,'Packages'],['⬇',fmt(totalDL),'Downloads'],['🔑',`${tokens.length}/10`,'API Tokens']].map(([i,v,l])=>`
+      <div class="stat-card"><span>${i}</span><span class="stat-num">${v}</span><span class="stat-lbl">${l}</span></div>`).join('')}
     </div>
 
-    <!-- tabs -->
-    <div style="display:flex;gap:.25rem;background:var(--bg2);border:1px solid var(--border);
-      border-radius:10px;padding:.3rem;width:fit-content;margin-bottom:1.5rem">
-      <button onclick="switchTab('packages')" class="tab-btn ${activeTab==='packages'?'tab-active':''}"
-        style="padding:.4rem 1rem;border-radius:8px;border:none;cursor:pointer;font-size:.875rem;font-weight:500;
-          background:${activeTab==='packages'?'var(--accent)':'transparent'};
-          color:${activeTab==='packages'?'#fff':'var(--muted)'}">
-        📦 Packages
+    <!-- Tabs -->
+    <div class="tab-bar">
+      <button class="tab-btn ${tab==='packages'?'active':''}" onclick="switchTab('packages')">
+        📦 Packages <span class="tab-count">${pkgs.length}</span>
       </button>
-      <button onclick="switchTab('tokens')" class="tab-btn ${activeTab==='tokens'?'tab-active':''}"
-        style="padding:.4rem 1rem;border-radius:8px;border:none;cursor:pointer;font-size:.875rem;font-weight:500;
-          background:${activeTab==='tokens'?'var(--accent)':'transparent'};
-          color:${activeTab==='tokens'?'#fff':'var(--muted)'}">
-        🔑 API Tokens
+      <button class="tab-btn ${tab==='tokens'?'active':''}" onclick="switchTab('tokens')">
+        🔑 API Tokens <span class="tab-count">${tokens.length}</span>
       </button>
     </div>
+    <div id="tab-body"></div>`;
 
-    <div id="tab-content"></div>`;
-
-    window.switchTab = function(tab) { activeTab = tab; render(); renderTab(); };
+    window.switchTab=t=>{tab=t;render();renderTab()};
     renderTab();
   }
 
-  function renderTab() {
-    const c = qs('#tab-content');
-    if (activeTab === 'packages') {
-      c.innerHTML = pkgs.length ? `
-        <div style="display:flex;flex-direction:column;gap:.75rem">
-          ${pkgs.map(p=>`
-          <div class="card card-pad" style="display:flex;align-items:center;gap:1rem">
+  function renderTab(){
+    const c=qs('#tab-body');
+    if(tab==='packages'){
+      c.innerHTML=pkgs.length
+        ?`<div style="display:flex;flex-direction:column;gap:.6rem">${pkgs.map(p=>`
+          <div class="panel" style="display:flex;align-items:center;gap:1rem;padding:.85rem 1rem">
             <div style="flex:1;min-width:0">
-              <a href="/package/${esc(p.name)}" style="font-weight:600;color:var(--accent)">${esc(p.name)}</a>
-              <span style="color:var(--muted);font-size:.8rem;margin-left:.4rem">v${esc(p.latest)}</span>
-              <p style="color:var(--muted);font-size:.82rem;margin-top:.2rem;
-                overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.description)}</p>
+              <a href="/package/${esc(p.name)}" style="font-weight:700;font-family:var(--mono);font-size:.92rem;color:var(--accent)">${esc(p.name)}</a>
+              <span class="badge badge-dim" style="margin-left:.4rem;font-family:var(--mono)">v${esc(p.latest)}</span>
+              <p style="font-size:.78rem;color:var(--muted);margin-top:.2rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.description)}</p>
             </div>
             <div style="text-align:right;flex-shrink:0">
-              <div style="font-weight:700;font-size:1rem">${fmt(p.total_downloads)}</div>
-              <div style="font-size:.72rem;color:var(--muted)">downloads</div>
+              <div style="font-weight:800;font-family:var(--mono);font-size:.95rem;color:var(--fg)">${fmt(p.total_downloads)}</div>
+              <div style="font-size:.68rem;color:var(--muted)">downloads</div>
             </div>
-          </div>`).join('')}
-        </div>` :
-        `<div class="empty"><div class="empty-icon">📦</div>
-          <h3>No packages yet</h3>
-          <p>Publish your first package with <code class="inline-code">omnip publish .</code></p>
-        </div>`;
+          </div>`).join('')}</div>`
+        :`<div class="empty"><div class="empty-icon">📦</div><h3>No packages yet</h3>
+           <p>Publish your first: <code class="inline-code">omnip publish .</code></p></div>`;
     } else {
-      c.innerHTML = `
-      <div id="new-token-banner"></div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
-        <p style="font-size:.875rem;color:var(--muted)">${tokens.length}/10 tokens used</p>
-        <button class="btn btn-primary btn-sm" onclick="createToken()" ${tokens.length>=10?'disabled':''}>
-          + New token
-        </button>
+      c.innerHTML=`
+      <div id="tok-banner"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
+        <p style="font-size:.78rem;color:var(--muted);font-family:var(--mono)">${tokens.length}/10 tokens used</p>
+        <button class="btn btn-primary btn-sm" onclick="createToken()" ${tokens.length>=10?'disabled':''}>+ New token</button>
       </div>
-      <div id="token-list">
-        ${tokens.length ? tokens.map(t=>`
-        <div class="card card-pad" style="display:flex;align-items:center;gap:.75rem;margin-bottom:.5rem">
-          <code style="flex:1;font-size:.82rem;color:var(--muted);font-family:monospace">${esc(t.display)}</code>
-          <span style="font-size:.75rem;color:var(--muted)">${esc(t.label)}</span>
+      <div id="tok-list">
+        ${tokens.length?tokens.map(t=>`
+        <div class="panel" style="display:flex;align-items:center;gap:.75rem;padding:.75rem 1rem;margin-bottom:.5rem">
+          <code style="flex:1;font-size:.78rem;color:var(--muted);font-family:var(--mono);word-break:break-all">${esc(t.display)}</code>
+          <span style="font-size:.72rem;color:var(--dim);font-family:var(--mono)">${esc(t.label)}</span>
           <button class="btn btn-danger btn-sm" onclick="revokeToken('${esc(t.display)}')">Revoke</button>
-        </div>`).join('') :
-        `<div class="empty"><div class="empty-icon">🔑</div>
-          <h3>No API tokens</h3>
-          <p>Create one to use with <code class="inline-code">omnip publish</code></p>
-        </div>`}
+        </div>`).join('')
+        :`<div class="empty"><div class="empty-icon">🔑</div><h3>No API tokens</h3>
+           <p>Create one to publish with <code class="inline-code">omnip publish</code></p></div>`}
       </div>
-      <div class="card card-pad" style="margin-top:1rem">
-        <div style="font-weight:600;font-size:.875rem;margin-bottom:.75rem">Using API tokens</div>
-        <div class="code-block" style="margin-bottom:.5rem">set OPI_TOKEN=opi_your_token_here</div>
-        <div class="code-block">omnip publish .</div>
+      <div class="panel" style="margin-top:1rem">
+        <div class="panel-hdr"><span>Using API tokens</span></div>
+        <div style="padding:.75rem .85rem">
+          <div class="code-block" style="margin-bottom:.5rem">set OPI_TOKEN=opi_your_token_here</div>
+          <div class="code-block">omnip publish .</div>
+        </div>
       </div>`;
     }
   }
 
-  window.createToken = async function() {
-    const { ok, data } = await api('/user/tokens', { method: 'POST', body: '{}' });
-    if (ok) {
-      qs('#new-token-banner').innerHTML = `
-      <div class="alert alert-success" style="margin-bottom:1rem">
+  window.createToken=async()=>{
+    const {ok,data}=await api('/user/tokens',{method:'POST',body:'{}'});
+    if(ok){
+      qs('#tok-banner').innerHTML=`<div class="alert alert-info" style="margin-bottom:.75rem">
         <strong>Save this token — shown only once:</strong><br>
-        <code style="font-family:monospace;font-size:.85rem;word-break:break-all">${esc(data.token)}</code>
+        <code style="font-family:var(--mono);font-size:.8rem;word-break:break-all">${esc(data.token)}</code>
         <button onclick="navigator.clipboard.writeText('${esc(data.token)}');this.textContent='Copied!'"
-          class="btn btn-outline btn-sm" style="margin-top:.5rem">Copy</button>
+          class="btn btn-ghost btn-sm" style="margin-top:.5rem;border-radius:var(--r-sm)">Copy</button>
       </div>`;
-      tokens.push({ display: data.token.slice(0,10) + '...' + data.token.slice(-4), label: 'default', created_at: new Date().toISOString() });
+      tokens.push({display:data.token.slice(0,10)+'...'+data.token.slice(-4),label:'default',created_at:new Date().toISOString()});
       renderTab();
     }
   };
-
-  window.revokeToken = async function(display) {
-    const prefix = display.replace(/\.\.\..+$/, '');
-    await api(`/user/tokens?token=${encodeURIComponent(prefix)}`, { method: 'DELETE' });
-    const i = tokens.findIndex(t => t.display === display);
-    if (i >= 0) tokens.splice(i, 1);
+  window.revokeToken=async display=>{
+    const prefix=display.replace(/\.\.\..+$/,'');
+    await api(`/user/tokens?token=${encodeURIComponent(prefix)}`,{method:'DELETE'});
+    const i=tokens.findIndex(t=>t.display===display);
+    if(i>=0) tokens.splice(i,1);
     renderTab();
   };
-
   render();
 }
 </script>
