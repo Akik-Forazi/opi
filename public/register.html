@@ -4,101 +4,67 @@
 <title>Register — OPI</title><link rel="stylesheet" href="/public/opi.css"></head>
 <body>
 <nav class="nav" id="nav"></nav>
-<div style="min-height:calc(100vh - 56px);display:flex;align-items:center;justify-content:center;padding:2rem">
-  <div style="width:100%;max-width:400px">
-    <div style="text-align:center;margin-bottom:2rem">
-      <div style="font-size:2rem;font-weight:800;margin-bottom:.25rem"><span style="color:var(--accent)">OPI</span></div>
-      <h1 style="font-size:1.3rem;font-weight:700">Create your account</h1>
-      <p style="color:var(--muted);font-size:.875rem;margin-top:.3rem">Join the Omnikarai community</p>
+<div style="min-height:calc(100vh - var(--nav-h));display:flex;align-items:center;justify-content:center;padding:2rem 1rem;position:relative;z-index:1">
+  <div style="width:100%;max-width:390px">
+    <div style="text-align:center;margin-bottom:1.75rem">
+      <div style="display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--blue));margin-bottom:.75rem;font-weight:900;font-size:1.1rem;color:#fff;box-shadow:0 0 24px var(--acc-glow)">O</div>
+      <h1 style="font-size:1.25rem;font-weight:800;margin-bottom:.25rem">Create your account</h1>
+      <p style="font-size:.82rem;color:var(--muted)">Join the Omnikarai community</p>
     </div>
-    <div class="card card-pad">
-      <div id="alert"></div>
-      <form id="reg-form">
-        <div class="form-group">
-          <label>Username <span style="color:var(--red)">*</span></label>
-          <input id="username" type="text" autocomplete="username" placeholder="akikfaraji" required>
-          <div class="form-hint">3–32 chars, letters/numbers/-/_ only</div>
-        </div>
-        <div class="form-group">
-          <label>Display Name</label>
-          <input id="display_name" type="text" autocomplete="name" placeholder="Akik Faraji">
-        </div>
-        <div class="form-group">
-          <label>Email <span style="color:var(--red)">*</span></label>
-          <input id="email" type="email" autocomplete="email" placeholder="akik@fraziym.dev" required>
-        </div>
-        <div class="form-group">
-          <label>Password <span style="color:var(--red)">*</span></label>
-          <div style="position:relative">
-            <input id="password" type="password" autocomplete="new-password" required style="padding-right:2.5rem">
-            <button type="button" id="toggle-pw"
-              style="position:absolute;right:.75rem;top:50%;transform:translateY(-50%);
-                background:none;border:none;color:var(--muted);cursor:pointer">👁</button>
+    <div class="panel">
+      <div style="padding:1.25rem">
+        <div id="alert"></div>
+        <form id="rf">
+          <div class="form-group">
+            <label>Username <span style="color:var(--red)">*</span></label>
+            <input id="un" type="text" autocomplete="username" placeholder="akikfaraji" required>
+            <div class="form-hint">3–32 chars · letters, numbers, - or _</div>
           </div>
-          <div id="pw-rules" style="margin-top:.5rem;display:none;gap:.35rem;flex-direction:column"></div>
-        </div>
-        <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:.25rem" type="submit" id="submit-btn">
-          Create account
-        </button>
-        <p style="text-align:center;font-size:.75rem;color:var(--muted);margin-top:.75rem">
-          By registering you agree to our <a href="/help#terms">Terms of Service</a>.
-        </p>
-      </form>
+          <div class="form-group">
+            <label>Display name</label>
+            <input id="dn" type="text" placeholder="Akik Faraji">
+          </div>
+          <div class="form-group">
+            <label>Email <span style="color:var(--red)">*</span></label>
+            <input id="em" type="email" autocomplete="email" placeholder="akik@fraziym.dev" required>
+          </div>
+          <div class="form-group" style="margin-bottom:1.1rem">
+            <label>Password <span style="color:var(--red)">*</span></label>
+            <div style="position:relative">
+              <input id="pw" type="password" autocomplete="new-password" required style="padding-right:2.5rem">
+              <button type="button" id="tpw" style="position:absolute;right:.75rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:.85rem">👁</button>
+            </div>
+            <div id="pwrules" style="display:none;margin-top:.5rem;display:flex;flex-direction:column;gap:.25rem"></div>
+          </div>
+          <button class="btn btn-primary" style="width:100%;justify-content:center;border-radius:var(--r)" type="submit" id="sb">Create account</button>
+          <p style="text-align:center;font-size:.7rem;color:var(--muted);margin-top:.65rem">By registering you agree to our <a href="/help#terms">Terms of Service</a>.</p>
+        </form>
+      </div>
     </div>
-    <p style="text-align:center;color:var(--muted);font-size:.875rem;margin-top:1.25rem">
-      Already have an account? <a href="/login">Sign in</a>
-    </p>
+    <p style="text-align:center;color:var(--muted);font-size:.82rem;margin-top:1.1rem">Already have an account? <a href="/login">Sign in</a></p>
   </div>
 </div>
 <script src="/public/opi.js"></script>
 <script>
-async function pageInit() {
-  if (Auth.isLoggedIn()) { window.location.href = '/dashboard'; return; }
-
-  qs('#toggle-pw').onclick = () => {
-    const p = qs('#password'); p.type = p.type === 'password' ? 'text' : 'password';
+async function pageInit(){
+  if(Auth.isLoggedIn()){location.href='/dashboard';return}
+  qs('#tpw').onclick=()=>{const p=qs('#pw');p.type=p.type==='password'?'text':'password'};
+  qs('#pw').oninput=function(){
+    const v=this.value,el=qs('#pwrules');
+    const rules=[[v.length>=8,'At least 8 characters'],[/[A-Z]/.test(v),'One uppercase letter'],[/[0-9]/.test(v),'One number']];
+    if(v){el.style.display='flex';el.innerHTML=rules.map(([ok,t])=>`<div style="font-size:.72rem;color:${ok?'var(--cyan)':'var(--muted)'};">${ok?'✓':'○'} ${t}</div>`).join('')}
+    else el.style.display='none';
   };
-
-  qs('#password').oninput = function() {
-    const pw = this.value;
-    const rules = [
-      [pw.length >= 8,    'At least 8 characters'],
-      [/[A-Z]/.test(pw),  'One uppercase letter'],
-      [/[0-9]/.test(pw),  'One number'],
-    ];
-    const el = qs('#pw-rules');
-    if (pw) {
-      el.style.display = 'flex';
-      el.innerHTML = rules.map(([ok, txt]) =>
-        `<div style="font-size:.75rem;color:${ok?'var(--acc2)':'var(--muted)'}">
-          ${ok ? '✓' : '○'} ${txt}</div>`).join('');
-    } else { el.style.display = 'none'; }
-  };
-
-  qs('#reg-form').onsubmit = async e => {
+  qs('#rf').onsubmit=async e=>{
     e.preventDefault();
-    const btn = qs('#submit-btn');
-    btn.disabled = true; btn.innerHTML = '<div class="spinner"></div> Creating…';
-    qs('#alert').innerHTML = '';
-
-    const { ok, data } = await api('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify({
-        username:     qs('#username').value.trim(),
-        email:        qs('#email').value.trim(),
-        password:     qs('#password').value,
-        display_name: qs('#display_name').value.trim(),
-      })
-    });
-
-    if (ok) {
-      Auth.setToken(data.token);
-      Auth.setUser(data.user);
-      window.location.href = '/dashboard';
-    } else {
-      qs('#alert').innerHTML = `<div class="alert alert-error">${esc(data.error || 'Registration failed')}</div>`;
-      btn.disabled = false; btn.textContent = 'Create account';
-    }
+    const btn=qs('#sb');btn.disabled=true;btn.innerHTML='<div class="spinner" style="width:14px;height:14px"></div> Creating…';
+    qs('#alert').innerHTML='';
+    const {ok,data}=await api('/auth/register',{method:'POST',body:JSON.stringify({
+      username:qs('#un').value.trim(),email:qs('#em').value.trim(),
+      password:qs('#pw').value,display_name:qs('#dn').value.trim()
+    })});
+    if(ok){Auth.setToken(data.token);Auth.setUser(data.user);location.href='/dashboard'}
+    else{qs('#alert').innerHTML=`<div class="alert alert-error">${esc(data.error||'Registration failed')}</div>`;btn.disabled=false;btn.textContent='Create account'}
   };
 }
 </script>
