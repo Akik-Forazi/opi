@@ -1,19 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Dashboard — OPI</title><link rel="stylesheet" href="/public/opi.css"></head>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dashboard — OPI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="opi.css">
+</head>
 <body>
 <nav class="nav" id="nav"></nav>
 <main class="page" style="position:relative;z-index:1">
   <div id="root"><div class="loading-center" style="height:60vh"><div class="spinner"></div></div></div>
 </main>
 <footer id="footer" class="footer"></footer>
-<script src="/public/opi.js"></script>
+<script src="opi.js"></script>
 <script>
 async function pageInit(){
-  if(!Auth.isLoggedIn()){location.href='/login';return}
+  if(!Auth.isLoggedIn()){location.href='login.html';return}
   const user=await Auth.fetchUser();
-  if(!user){location.href='/login';return}
+  if(!user){location.href='login.html';return}
 
   const[pkgsData,tokensData]=await Promise.all([
     Promise.all((user.packages||[]).map(n=>api(`/packages/${n}`))),
@@ -32,24 +39,25 @@ async function pageInit(){
         <p style="color:var(--muted);font-size:.82rem;font-family:var(--mono)">@${esc(user.username)}</p>
       </div>
       <div style="display:flex;gap:.5rem">
-        <a href="/user/${esc(user.username)}" class="btn btn-ghost btn-sm">View profile</a>
-        <a href="/settings" class="btn btn-outline btn-sm">Settings</a>
+        <a href="user.html?u=${esc(user.username)}" class="btn btn-ghost btn-sm">View profile</a>
+        <a href="settings.html" class="btn btn-outline btn-sm">Settings</a>
       </div>
     </div>
 
-    <!-- Stats -->
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-bottom:1.5rem">
-      ${[['📦',pkgs.length,'Packages'],['⬇',fmt(totalDL),'Downloads'],['🔑',`${tokens.length}/10`,'API Tokens']].map(([i,v,l])=>`
-      <div class="stat-card"><span>${i}</span><span class="stat-num">${v}</span><span class="stat-lbl">${l}</span></div>`).join('')}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(10rem,1fr));gap:.75rem;margin-bottom:1.5rem">
+      ${[['Packages',pkgs.length],['Downloads',fmt(totalDL)],['API Tokens',`${tokens.length}/10`]].map(([l,v])=>`
+      <div class="stat-card">
+        <span class="stat-num">${v}</span>
+        <span class="stat-lbl">${l}</span>
+      </div>`).join('')}
     </div>
 
-    <!-- Tabs -->
     <div class="tab-bar">
       <button class="tab-btn ${tab==='packages'?'active':''}" onclick="switchTab('packages')">
-        📦 Packages <span class="tab-count">${pkgs.length}</span>
+        Packages <span class="tab-count">${pkgs.length}</span>
       </button>
       <button class="tab-btn ${tab==='tokens'?'active':''}" onclick="switchTab('tokens')">
-        🔑 API Tokens <span class="tab-count">${tokens.length}</span>
+        API Tokens <span class="tab-count">${tokens.length}</span>
       </button>
     </div>
     <div id="tab-body"></div>`;
@@ -65,7 +73,7 @@ async function pageInit(){
         ?`<div style="display:flex;flex-direction:column;gap:.6rem">${pkgs.map(p=>`
           <div class="panel" style="display:flex;align-items:center;gap:1rem;padding:.85rem 1rem">
             <div style="flex:1;min-width:0">
-              <a href="/package/${esc(p.name)}" style="font-weight:700;font-family:var(--mono);font-size:.92rem;color:var(--accent)">${esc(p.name)}</a>
+              <a href="package.html?name=${esc(p.name)}" style="font-weight:700;font-family:var(--mono);font-size:.92rem;color:var(--accent)">${esc(p.name)}</a>
               <span class="badge badge-dim" style="margin-left:.4rem;font-family:var(--mono)">v${esc(p.latest)}</span>
               <p style="font-size:.78rem;color:var(--muted);margin-top:.2rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.description)}</p>
             </div>
@@ -74,7 +82,12 @@ async function pageInit(){
               <div style="font-size:.68rem;color:var(--muted)">downloads</div>
             </div>
           </div>`).join('')}</div>`
-        :`<div class="empty"><div class="empty-icon">📦</div><h3>No packages yet</h3>
+        :`<div class="empty"><div class="empty-icon" style="font-size:2rem;margin-bottom:.75rem">
+           <svg width="48" height="48" viewBox="0 0 48 48" fill="none" style="margin:0 auto;opacity:.3">
+             <path d="M6 24l18-14 18 14v22H6V24z" stroke="#b89fff" stroke-width="2.5" stroke-linejoin="round"/>
+             <rect x="18" y="32" width="12" height="14" rx="1" stroke="#b89fff" stroke-width="2.5"/>
+           </svg></div>
+           <h3>No packages yet</h3>
            <p>Publish your first: <code class="inline-code">omnip publish .</code></p></div>`;
     } else {
       c.innerHTML=`
@@ -87,10 +100,10 @@ async function pageInit(){
         ${tokens.length?tokens.map(t=>`
         <div class="panel" style="display:flex;align-items:center;gap:.75rem;padding:.75rem 1rem;margin-bottom:.5rem">
           <code style="flex:1;font-size:.78rem;color:var(--muted);font-family:var(--mono);word-break:break-all">${esc(t.display)}</code>
-          <span style="font-size:.72rem;color:var(--dim);font-family:var(--mono)">${esc(t.label)}</span>
+          <span style="font-size:.72rem;color:var(--dim);font-family:var(--mono)">${esc(t.label||'default')}</span>
           <button class="btn btn-danger btn-sm" onclick="revokeToken('${esc(t.display)}')">Revoke</button>
         </div>`).join('')
-        :`<div class="empty"><div class="empty-icon">🔑</div><h3>No API tokens</h3>
+        :`<div class="empty"><h3>No API tokens</h3>
            <p>Create one to publish with <code class="inline-code">omnip publish</code></p></div>`}
       </div>
       <div class="panel" style="margin-top:1rem">
@@ -110,9 +123,9 @@ async function pageInit(){
         <strong>Save this token — shown only once:</strong><br>
         <code style="font-family:var(--mono);font-size:.8rem;word-break:break-all">${esc(data.token)}</code>
         <button onclick="navigator.clipboard.writeText('${esc(data.token)}');this.textContent='Copied!'"
-          class="btn btn-ghost btn-sm" style="margin-top:.5rem;border-radius:var(--r-sm)">Copy</button>
+          class="btn btn-ghost btn-sm" style="margin-top:.5rem">Copy</button>
       </div>`;
-      tokens.push({display:data.token.slice(0,10)+'...'+data.token.slice(-4),label:'default',created_at:new Date().toISOString()});
+      tokens.push({display:data.token.slice(0,10)+'...'+data.token.slice(-4),label:'default'});
       renderTab();
     }
   };
@@ -126,4 +139,5 @@ async function pageInit(){
   render();
 }
 </script>
-</body></html>
+</body>
+</html>
