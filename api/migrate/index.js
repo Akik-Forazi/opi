@@ -58,6 +58,7 @@ module.exports = async function handler(req, res) {
       dev_dependencies JSONB DEFAULT '{}',
       readme TEXT DEFAULT '',
       changelog TEXT DEFAULT '',
+      source TEXT DEFAULT '',
       yanked BOOLEAN DEFAULT FALSE,
       published_at TIMESTAMPTZ DEFAULT NOW(),
       published_by TEXT NOT NULL,
@@ -68,6 +69,9 @@ module.exports = async function handler(req, res) {
     await sql`CREATE INDEX IF NOT EXISTS idx_pkg_owner ON packages(owner)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_pkgver_name ON package_versions(name)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_tok_username ON api_tokens(username)`;
+
+    // Add source column to existing tables if missing (idempotent)
+    await sql`ALTER TABLE package_versions ADD COLUMN IF NOT EXISTS source TEXT DEFAULT ''`;
 
     return res.status(200).json({ ok: true, message: 'Schema ready. Run /api/migrate/seed to insert sample packages.' });
   } catch (e) {

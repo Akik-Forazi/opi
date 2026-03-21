@@ -28,11 +28,14 @@ module.exports = async function handler(req, res) {
       keywords: meta.keywords || [],
       total_downloads: Number(meta.total_downloads) || 0,
       versions: vv.map(r => r.version),
+      source: ver[0]?.source || '',
+      readme: ver[0]?.readme || '',
       latest_release: ver[0] ? {
         ...ver[0],
         keywords: ver[0].keywords || [],
         dependencies:     ver[0].dependencies     || {},
         dev_dependencies: ver[0].dev_dependencies || {},
+        source: ver[0].source || '',
       } : null,
     });
   }

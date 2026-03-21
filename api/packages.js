@@ -60,7 +60,7 @@ module.exports = async function handler(req, res) {
     }
     const username = trows[0].username;
     const { name, version, description, license, homepage, repository,
-            keywords, dependencies, readme, changelog } = req.body;
+            keywords, dependencies, readme, changelog, source } = req.body;
 
     if (!name || !/^[a-z][a-z0-9_-]{0,63}$/.test(name))
       return res.status(400).json({ error: 'Invalid package name' });
@@ -89,8 +89,8 @@ module.exports = async function handler(req, res) {
         keywords=EXCLUDED.keywords, updated_at=EXCLUDED.updated_at`;
 
     await sql`
-      INSERT INTO package_versions (name, version, description, author, license, keywords, dependencies, readme, changelog, published_at, published_by)
-      VALUES (${name}, ${version}, ${description}, ${username}, ${license||'MIT'}, ${kw}, ${dep}, ${readme||''}, ${changelog||''}, ${now}, ${username})
+      INSERT INTO package_versions (name, version, description, author, license, keywords, dependencies, readme, changelog, source, published_at, published_by)
+      VALUES (${name}, ${version}, ${description}, ${username}, ${license||'MIT'}, ${kw}, ${dep}, ${readme||''}, ${changelog||''}, ${source||''}, ${now}, ${username})
       ON CONFLICT (name, version) DO NOTHING`;
 
     await sql`UPDATE users SET packages = array_append(packages, ${name}) WHERE username = ${username} AND NOT (packages @> ARRAY[${name}])`;
