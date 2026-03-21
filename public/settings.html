@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Settings — OPI</title><link rel="stylesheet" href="/public/opi.css"></head>
+<body>
+<nav class="nav" id="nav"></nav>
+<main class="page" style="max-width:640px">
+  <h1 style="font-size:1.5rem;font-weight:800;margin-bottom:2rem">Account Settings</h1>
+  <div id="root"><div class="loading-center"><div class="spinner"></div></div></div>
+</main>
+<footer id="footer"></footer>
+<script src="/public/opi.js"></script>
+<script>
+async function pageInit() {
+  if (!Auth.isLoggedIn()) { window.location.href = '/login'; return; }
+  const user = await Auth.fetchUser();
+  if (!user) { window.location.href = '/login'; return; }
+
+  qs('#root').innerHTML = `
+  <div class="card card-pad" style="margin-bottom:1.5rem">
+    <h2 style="font-size:1rem;font-weight:700;margin-bottom:1.25rem">Public Profile</h2>
+    <div id="profile-alert"></div>
+    <form id="profile-form">
+      <div class="form-group">
+        <label>Username</label>
+        <input value="${esc(user.username)}" disabled style="color:var(--muted);cursor:not-allowed">
+        <div class="form-hint">Username cannot be changed.</div>
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input value="${esc(user.email)}" disabled style="color:var(--muted);cursor:not-allowed">
+      </div>
+      <div class="form-group">
+        <label>Display Name</label>
+        <input id="display_name" value="${esc(user.display_name || '')}" placeholder="Your full name">
+      </div>
+      <div class="form-group">
+        <label>Bio</label>
+        <textarea id="bio" placeholder="A short bio…">${esc(user.bio || '')}</textarea>
+      </div>
+      <div class="form-group">
+        <label>Website</label>
+        <input id="website" type="url" value="${esc(user.website || '')}" placeholder="https://yoursite.dev">
+      </div>
+      <button class="btn btn-primary" type="submit" id="save-btn">Save changes</button>
+    </form>
+  </div>
+
+  <div class="card card-pad" style="border-color:rgba(240,96,96,.3)">
+    <h2 style="font-size:1rem;font-weight:700;color:var(--red);margin-bottom:.5rem">Danger Zone</h2>
+    <p style="font-size:.875rem;color:var(--muted);margin-bottom:1rem">These actions are permanent.</p>
+    <button class="btn btn-danger" onclick="if(confirm('Delete account? This cannot be undone.'))Auth.logout()">
+      Delete account
+    </button>
+  </div>`;
+
+  qs('#profile-form').onsubmit = async e => {
+    e.preventDefault();
+    const btn = qs('#save-btn');
+    btn.disabled = true; btn.textContent = 'Saving…';
+    qs('#profile-alert').innerHTML = '';
+
+    const { ok, data } = await api('/user/profile', {
+      method: 'PATCH',
+      body: JSON.stringify({
+        display_name: qs('#display_name').value.trim(),
+        bio:          qs('#bio').value.trim(),
+        website:      qs('#website').value.trim(),
+      })
+    });
+
+    if (ok) {
+      qs('#profile-alert').innerHTML = '<div class="alert alert-success">✓ Profile saved</div>';
+      const u = { ...Auth.getUser(), display_name: qs('#display_name').value.trim() };
+      Auth.setUser(u); renderNav();
+    } else {
+      qs('#profile-alert').innerHTML = `<div class="alert alert-error">${esc(data.error || 'Save failed')}</div>`;
+    }
+    btn.disabled = false; btn.textContent = 'Save changes';
+  };
+}
+</script>
+</body></html>

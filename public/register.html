@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Register — OPI</title><link rel="stylesheet" href="/public/opi.css"></head>
+<body>
+<nav class="nav" id="nav"></nav>
+<div style="min-height:calc(100vh - 56px);display:flex;align-items:center;justify-content:center;padding:2rem">
+  <div style="width:100%;max-width:400px">
+    <div style="text-align:center;margin-bottom:2rem">
+      <div style="font-size:2rem;font-weight:800;margin-bottom:.25rem"><span style="color:var(--accent)">OPI</span></div>
+      <h1 style="font-size:1.3rem;font-weight:700">Create your account</h1>
+      <p style="color:var(--muted);font-size:.875rem;margin-top:.3rem">Join the Omnikarai community</p>
+    </div>
+    <div class="card card-pad">
+      <div id="alert"></div>
+      <form id="reg-form">
+        <div class="form-group">
+          <label>Username <span style="color:var(--red)">*</span></label>
+          <input id="username" type="text" autocomplete="username" placeholder="akikfaraji" required>
+          <div class="form-hint">3–32 chars, letters/numbers/-/_ only</div>
+        </div>
+        <div class="form-group">
+          <label>Display Name</label>
+          <input id="display_name" type="text" autocomplete="name" placeholder="Akik Faraji">
+        </div>
+        <div class="form-group">
+          <label>Email <span style="color:var(--red)">*</span></label>
+          <input id="email" type="email" autocomplete="email" placeholder="akik@fraziym.dev" required>
+        </div>
+        <div class="form-group">
+          <label>Password <span style="color:var(--red)">*</span></label>
+          <div style="position:relative">
+            <input id="password" type="password" autocomplete="new-password" required style="padding-right:2.5rem">
+            <button type="button" id="toggle-pw"
+              style="position:absolute;right:.75rem;top:50%;transform:translateY(-50%);
+                background:none;border:none;color:var(--muted);cursor:pointer">👁</button>
+          </div>
+          <div id="pw-rules" style="margin-top:.5rem;display:none;gap:.35rem;flex-direction:column"></div>
+        </div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:.25rem" type="submit" id="submit-btn">
+          Create account
+        </button>
+        <p style="text-align:center;font-size:.75rem;color:var(--muted);margin-top:.75rem">
+          By registering you agree to our <a href="/help#terms">Terms of Service</a>.
+        </p>
+      </form>
+    </div>
+    <p style="text-align:center;color:var(--muted);font-size:.875rem;margin-top:1.25rem">
+      Already have an account? <a href="/login">Sign in</a>
+    </p>
+  </div>
+</div>
+<script src="/public/opi.js"></script>
+<script>
+async function pageInit() {
+  if (Auth.isLoggedIn()) { window.location.href = '/dashboard'; return; }
+
+  qs('#toggle-pw').onclick = () => {
+    const p = qs('#password'); p.type = p.type === 'password' ? 'text' : 'password';
+  };
+
+  qs('#password').oninput = function() {
+    const pw = this.value;
+    const rules = [
+      [pw.length >= 8,    'At least 8 characters'],
+      [/[A-Z]/.test(pw),  'One uppercase letter'],
+      [/[0-9]/.test(pw),  'One number'],
+    ];
+    const el = qs('#pw-rules');
+    if (pw) {
+      el.style.display = 'flex';
+      el.innerHTML = rules.map(([ok, txt]) =>
+        `<div style="font-size:.75rem;color:${ok?'var(--acc2)':'var(--muted)'}">
+          ${ok ? '✓' : '○'} ${txt}</div>`).join('');
+    } else { el.style.display = 'none'; }
+  };
+
+  qs('#reg-form').onsubmit = async e => {
+    e.preventDefault();
+    const btn = qs('#submit-btn');
+    btn.disabled = true; btn.innerHTML = '<div class="spinner"></div> Creating…';
+    qs('#alert').innerHTML = '';
+
+    const { ok, data } = await api('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({
+        username:     qs('#username').value.trim(),
+        email:        qs('#email').value.trim(),
+        password:     qs('#password').value,
+        display_name: qs('#display_name').value.trim(),
+      })
+    });
+
+    if (ok) {
+      Auth.setToken(data.token);
+      Auth.setUser(data.user);
+      window.location.href = '/dashboard';
+    } else {
+      qs('#alert').innerHTML = `<div class="alert alert-error">${esc(data.error || 'Registration failed')}</div>`;
+      btn.disabled = false; btn.textContent = 'Create account';
+    }
+  };
+}
+</script>
+</body></html>

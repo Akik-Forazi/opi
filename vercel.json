@@ -1,6 +1,24 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": ".next",
-  "framework": "nextjs",
-  "installCommand": "npm install"
+  "version": 2,
+  "rewrites": [
+    { "source": "/package/:name", "destination": "/public/package.html" },
+    { "source": "/user/:name",    "destination": "/public/user.html" },
+    { "source": "/search",        "destination": "/public/search.html" },
+    { "source": "/login",         "destination": "/public/login.html" },
+    { "source": "/register",      "destination": "/public/register.html" },
+    { "source": "/dashboard",     "destination": "/public/dashboard.html" },
+    { "source": "/settings",      "destination": "/public/settings.html" },
+    { "source": "/help",          "destination": "/public/help.html" },
+    { "source": "/",              "destination": "/public/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin",  "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET,POST,DELETE,PATCH,OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type,Authorization" }
+      ]
+    }
+  ]
 }

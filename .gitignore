@@ -8,3 +8,8 @@ node_modules/
 dist/
 out/
 *.tsbuildinfo
+
+# local SQLite dev DB (do NOT commit to git)
+opi-dev.db
+opi-dev.db-shm
+opi-dev.db-wal

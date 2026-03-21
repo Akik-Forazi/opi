@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title id="page-title">Package — OPI</title><link rel="stylesheet" href="/public/opi.css"></head>
+<body>
+<nav class="nav" id="nav"></nav>
+<div id="root"><div class="loading-center" style="height:60vh"><div class="spinner"></div></div></div>
+<footer id="footer"></footer>
+<script src="/public/opi.js"></script>
+<script>
+async function pageInit() {
+  const name = location.pathname.split('/').pop();
+  if (!name) { qs('#root').innerHTML='<div class="empty"><h3>No package specified</h3></div>'; return; }
+
+  const { ok, data } = await api(`/packages/${name}`);
+  if (!ok) {
+    qs('#root').innerHTML = `<div class="empty" style="height:60vh">
+      <div class="empty-icon">📦</div>
+      <h3>Package not found</h3>
+      <p>"${esc(name)}" doesn't exist on OPI.</p>
+      <a href="/search" class="btn btn-outline" style="margin-top:1rem">Browse packages</a>
+    </div>`;
+    return;
+  }
+
+  const p = data;
+  const versions = p.versions || [p.latest];
+  const hasDeps = p.dependencies && Object.keys(p.dependencies).length > 0;
+  document.title = `${p.name} · OPI`;
+
+  qs('#root').innerHTML = `
+  <!-- breadcrumb -->
+  <div style="border-bottom:1px solid var(--border);background:var(--bg)">
+    <div class="container" style="padding:1rem 1.5rem">
+      <div style="font-size:.82rem;color:var(--muted);margin-bottom:.6rem">
+        <a href="/">OPI</a> / <a href="/user/${esc(p.owner)}">@${esc(p.owner)}</a> /
+        <span style="color:var(--text);font-weight:600">${esc(p.name)}</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;margin-bottom:.6rem">
+        <h1 style="font-size:1.4rem;font-weight:800">${esc(p.name)}</h1>
+        <span class="tag tag-accent" style="font-family:monospace">v${esc(p.latest)}</span>
+        ${p.yanked ? '<span class="tag tag-red">Yanked</span>' : ''}
+        <span class="tag">${esc(p.license || 'MIT')}</span>
+      </div>
+      <p style="color:var(--muted);font-size:.95rem">${esc(p.description)}</p>
+      ${(p.keywords||[]).length ? `<div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.7rem">
+        ${p.keywords.map(k=>`<a href="/search?q=${encodeURIComponent(k)}" class="tag tag-accent">${esc(k)}</a>`).join('')}
+      </div>` : ''}
+    </div>
+  </div>
+
+  <div class="page grid-sidebar">
+    <!-- Main -->
+    <div>
+      <!-- Install box -->
+      <div class="card" style="margin-bottom:1.25rem;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:.5rem;padding:.7rem 1.1rem;
+          border-bottom:1px solid var(--border);font-weight:600;font-size:.88rem">
+          🖥️ Install
+        </div>
+        <div class="code-block" style="border:none;border-radius:0;margin:0">omnip install ${esc(p.name)}</div>
+        ${hasDeps ? `<div style="padding:.5rem 1.1rem;font-size:.78rem;color:var(--muted)">
+          Requires: ${Object.entries(p.dependencies).map(([k,v])=>`<span class="inline-code">${esc(k)} ${esc(v)}</span>`).join(' ')}
+        </div>` : ''}
+      </div>
+
+      <!-- README -->
+      <div class="card" style="margin-bottom:1.25rem">
+        <div style="padding:.7rem 1.1rem;border-bottom:1px solid var(--border);
+          font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600">
+          README
+        </div>
+        <div class="prose" style="padding:1.25rem 1.5rem" id="readme-body">
+          ${p.readme ? md(p.readme) : '<p style="color:var(--muted);font-style:italic">No README provided.</p>'}
+        </div>
+      </div>
+
+      <!-- Version history -->
+      <div class="card" style="margin-bottom:1.25rem">
+        <div style="padding:.7rem 1.1rem;border-bottom:1px solid var(--border);
+          font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600">
+          Version history (${versions.length})
+        </div>
+        <div>
+          ${[...versions].reverse().map(v=>`
+          <div style="display:flex;align-items:center;justify-content:space-between;
+            padding:.6rem 1.1rem;border-bottom:1px solid var(--border);font-size:.875rem;
+            ${v===p.latest?'background:rgba(124,106,247,.05)':''}">
+            <div style="display:flex;align-items:center;gap:.6rem">
+              <span style="font-family:monospace;${v===p.latest?'color:#a89cf9':'color:var(--muted)'}">${esc(v)}</span>
+              ${v===p.latest?'<span class="tag tag-accent">latest</span>':''}
+            </div>
+            <code class="inline-code" style="font-size:.75rem">omnip install ${esc(p.name)}@${esc(v)}</code>
+          </div>`).join('')}
+        </div>
+      </div>
+
+      <!-- Dependencies -->
+      <div class="card">
+        <div style="padding:.7rem 1.1rem;border-bottom:1px solid var(--border);
+          font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600">
+          Dependencies
+        </div>
+        ${hasDeps
+          ? Object.entries(p.dependencies).map(([k,v])=>`
+            <div style="display:flex;align-items:center;justify-content:space-between;
+              padding:.6rem 1.1rem;border-bottom:1px solid var(--border);font-size:.875rem">
+              <a href="/package/${esc(k)}" style="color:var(--accent);font-family:monospace">${esc(k)}</a>
+              <span style="color:var(--muted);font-family:monospace">${esc(v)}</span>
+            </div>`).join('')
+          : '<div style="padding:1.5rem;text-align:center;color:var(--muted);font-size:.875rem">No dependencies</div>'
+        }
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <aside>
+      <div class="card card-pad" style="margin-bottom:1rem">
+        <div class="side-row"><span class="lbl">Owner</span>
+          <span class="val"><a href="/user/${esc(p.owner)}">@${esc(p.owner)}</a></span></div>
+        <div class="side-row"><span class="lbl">Downloads</span>
+          <span class="val">${fmt(p.total_downloads)}</span></div>
+        <div class="side-row"><span class="lbl">Updated</span>
+          <span class="val">${elapsed(p.updated_at || p.published_at)}</span></div>
+        <div class="side-row"><span class="lbl">License</span>
+          <span class="val">${esc(p.license || 'MIT')}</span></div>
+        ${p.homepage ? `<div class="side-row"><span class="lbl">Homepage</span>
+          <span class="val"><a href="${esc(p.homepage)}" target="_blank" rel="noopener">
+            ${esc(p.homepage.replace(/^https?:\/\//,'').slice(0,30))}</a></span></div>` : ''}
+        ${p.repository ? `<div class="side-row"><span class="lbl">Repo</span>
+          <span class="val"><a href="${esc(p.repository)}" target="_blank" rel="noopener">
+            ${esc(p.repository.replace(/^https?:\/\/(www\.|github\.com\/)?/,'').slice(0,30))}</a></span></div>` : ''}
+      </div>
+      <div class="card card-pad" style="margin-bottom:1rem">
+        <div style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;
+          color:var(--muted);font-weight:600;margin-bottom:.75rem">API</div>
+        <code style="font-size:.75rem;color:var(--acc2);word-break:break-all;font-family:monospace">
+          GET /api/packages/${esc(p.name)}
+        </code>
+      </div>
+    </aside>
+  </div>`;
+}
+</script>
+</body></html>

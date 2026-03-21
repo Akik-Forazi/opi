@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Help & Docs — OPI</title><link rel="stylesheet" href="/public/opi.css"></head>
+<body>
+<nav class="nav" id="nav"></nav>
+<div style="max-width:1100px;margin:0 auto;padding:2.5rem 1.5rem;display:grid;grid-template-columns:200px 1fr;gap:3rem">
+  <nav style="position:sticky;top:80px;align-self:flex-start;font-size:.875rem">
+    <div style="color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin-bottom:.6rem">omnip CLI</div>
+    ${['install','uninstall','list','info','search','publish','update','init'].map(c=>
+      `<a href="#${c}" style="display:block;padding:.3rem 0;color:var(--muted)">${c}</a>`).join('')}
+    <div style="color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin-top:1.2rem;margin-bottom:.6rem">Reference</div>
+    <a href="#toml" style="display:block;padding:.3rem 0;color:var(--muted)">omnikarai.toml</a>
+    <a href="#tokens" style="display:block;padding:.3rem 0;color:var(--muted)">API tokens</a>
+    <a href="#api" style="display:block;padding:.3rem 0;color:var(--muted)">REST API</a>
+    <a href="#terms" style="display:block;padding:.3rem 0;color:var(--muted)">Terms</a>
+  </nav>
+
+  <div class="prose">
+    <h1 style="border-top:none;margin-top:0">OPI Documentation</h1>
+    <p>Complete reference for the <strong>Omnikarai Package Index</strong> and the <code>omnip</code> CLI.</p>
+
+    <h2 id="install">install</h2>
+    <p>Install a package from OPI or from the current directory.</p>
+    <pre><code>omnip install math_extra      # from OPI registry
+omnip install .               # from current directory</code></pre>
+    <p>Packages install to <code>%USERPROFILE%\.omnikarai\modules\&lt;name&gt;\</code>. Use in .ok files with:</p>
+    <pre><code>use math_extra</code></pre>
+
+    <h2 id="uninstall">uninstall</h2>
+    <pre><code>omnip uninstall math_extra</code></pre>
+
+    <h2 id="list">list</h2>
+    <p>List all installed packages with versions and descriptions.</p>
+    <pre><code>omnip list</code></pre>
+
+    <h2 id="info">info</h2>
+    <p>Show details about a package (installed or from OPI).</p>
+    <pre><code>omnip info math_extra</code></pre>
+
+    <h2 id="search">search</h2>
+    <pre><code>omnip search math
+omnip search string</code></pre>
+
+    <h2 id="publish">publish</h2>
+    <p>Publish to OPI. Requires an API token (see <a href="#tokens">API tokens</a>).</p>
+    <pre><code>set OPI_TOKEN=opi_your_token
+omnip publish .</code></pre>
+
+    <h2 id="update">update</h2>
+    <pre><code>omnip update              # update all remote packages
+omnip update math_extra   # update one package</code></pre>
+
+    <h2 id="init">init</h2>
+    <p>Create an <code>omnikarai.toml</code> in the current directory.</p>
+    <pre><code>omnip init</code></pre>
+
+    <h2 id="toml">omnikarai.toml</h2>
+    <pre><code>[metadata]
+name        = "my_package"
+version     = "1.0.0"
+description = "Does something useful"
+author      = "Your Name"
+license     = "MIT"
+homepage    = "https://github.com/you/my_package"
+
+[dependencies]
+math = "&gt;=1.0"</code></pre>
+
+    <h2 id="tokens">API Tokens</h2>
+    <p>Create an API token in your <a href="/dashboard">Dashboard → API Tokens</a> tab.</p>
+    <pre><code>set OPI_TOKEN=opi_your_token_here
+omnip publish .</code></pre>
+    <p>Or pass via header when using the REST API directly:</p>
+    <pre><code>Authorization: Bearer opi_your_token_here</code></pre>
+
+    <h2 id="api">REST API</h2>
+    <p>Base URL: <code>https://opi-nine.vercel.app</code></p>
+    <table>
+      <tr><th>Method</th><th>Endpoint</th><th>Description</th></tr>
+      <tr><td><code>GET</code></td><td><code>/api/packages</code></td><td>List / search packages</td></tr>
+      <tr><td><code>GET</code></td><td><code>/api/packages/:name</code></td><td>Package info + latest version</td></tr>
+      <tr><td><code>POST</code></td><td><code>/api/packages</code></td><td>Publish a package (auth required)</td></tr>
+      <tr><td><code>DELETE</code></td><td><code>/api/packages/:name</code></td><td>Delete package (owner only)</td></tr>
+      <tr><td><code>PATCH</code></td><td><code>/api/packages/:name</code></td><td>Yank a version (owner only)</td></tr>
+      <tr><td><code>GET</code></td><td><code>/api/search?q=</code></td><td>Search packages</td></tr>
+      <tr><td><code>GET</code></td><td><code>/api/stats</code></td><td>Registry statistics</td></tr>
+      <tr><td><code>POST</code></td><td><code>/api/auth/register</code></td><td>Create account</td></tr>
+      <tr><td><code>POST</code></td><td><code>/api/auth/login</code></td><td>Sign in</td></tr>
+      <tr><td><code>GET</code></td><td><code>/api/auth/me</code></td><td>Current user info</td></tr>
+      <tr><td><code>GET/POST/DELETE</code></td><td><code>/api/user/tokens</code></td><td>Manage API tokens</td></tr>
+      <tr><td><code>PATCH</code></td><td><code>/api/user/profile</code></td><td>Update profile</td></tr>
+    </table>
+
+    <h3>Example: publish via curl</h3>
+    <pre><code>curl -X POST https://opi-nine.vercel.app/api/packages \
+  -H "Authorization: Bearer opi_your_token" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"my_pkg","version":"1.0.0","description":"My package","license":"MIT","keywords":[],"dependencies":{}}'</code></pre>
+
+    <h2 id="terms">Terms of Service</h2>
+    <ul>
+      <li>Don't publish malicious, illegal, or harmful packages.</li>
+      <li>Don't impersonate other users or projects.</li>
+      <li>Package names are first-come first-served.</li>
+      <li>Yanked versions stay in the index but are flagged — not deleted.</li>
+      <li>We reserve the right to remove packages that violate these terms.</li>
+      <li>OPI is provided free of charge, as-is, without warranty.</li>
+    </ul>
+  </div>
+</div>
+<footer id="footer"></footer>
+<script src="/public/opi.js"></script>
+<script>
+// Highlight active TOC link on scroll
+document.addEventListener('DOMContentLoaded', () => {
+  const links = [...document.querySelectorAll('nav a[href^="#"]')];
+  window.addEventListener('scroll', () => {
+    let cur = '';
+    document.querySelectorAll('h2[id],h3[id]').forEach(h => {
+      if (h.getBoundingClientRect().top < 120) cur = h.id;
+    });
+    links.forEach(l => l.style.color = l.getAttribute('href') === '#'+cur ? 'var(--accent)' : 'var(--muted)');
+  });
+});
+</script>
+</body></html>

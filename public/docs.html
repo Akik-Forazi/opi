@@ -1,183 +1,55 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OPI Docs — omnip CLI Reference</title>
-<style>
-  :root { --bg:#0d0f14;--bg2:#13161e;--bg3:#1a1e28;--border:#252936;--accent:#7c6af7;--accent2:#56d3a0;--yellow:#f5c842;--text:#e2e4ed;--muted:#6b7280;--code-bg:#0a0c10; }
-  * { box-sizing:border-box;margin:0;padding:0; }
-  body { font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.7; }
-  a { color:var(--accent); text-decoration:none; }
-  nav { display:flex;align-items:center;justify-content:space-between;padding:0 2rem;height:60px;background:var(--bg2);border-bottom:1px solid var(--border); }
-  .nav-logo { font-size:1.3rem;font-weight:700; }
-  .nav-logo span { color:var(--accent); }
-  .nav-links { display:flex;gap:1.5rem;font-size:0.9rem;color:var(--muted); }
-  .nav-links a { color:var(--muted); }
-  .layout { display:flex;max-width:1100px;margin:0 auto;padding:2rem 1.5rem;gap:2.5rem; }
-  .sidebar { width:200px;flex-shrink:0;position:sticky;top:80px;align-self:flex-start; }
-  .sidebar h4 { font-size:0.75rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:0.6rem; }
-  .sidebar a { display:block;padding:0.3rem 0;font-size:0.88rem;color:var(--muted); }
-  .sidebar a:hover { color:var(--text); }
-  .content { flex:1;min-width:0; }
-  h1 { font-size:2rem;font-weight:800;margin-bottom:0.5rem; }
-  h2 { font-size:1.25rem;font-weight:700;margin:2.5rem 0 0.8rem;padding-top:1rem;border-top:1px solid var(--border); }
-  h3 { font-size:1rem;font-weight:600;color:var(--accent2);margin:1.5rem 0 0.4rem; }
-  p { color:var(--muted);margin-bottom:0.8rem; }
-  code { font-family:'Cascadia Code','Fira Code',monospace;font-size:0.88rem; }
-  .code-block { background:var(--code-bg);border:1px solid var(--border);border-radius:8px;padding:1rem 1.2rem;font-family:'Cascadia Code','Fira Code',monospace;font-size:0.88rem;overflow-x:auto;margin:0.8rem 0;white-space:pre; }
-  .cmd { color:#a8d8a8; }
-  .arg { color:#f5c842; }
-  .comment { color:#444; }
-  .flag { color:#7c6af7; }
-  table { width:100%;border-collapse:collapse;margin:0.8rem 0; }
-  th,td { padding:0.6rem 0.8rem;text-align:left;border-bottom:1px solid var(--border);font-size:0.88rem; }
-  th { color:var(--muted);font-weight:600;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.4px; }
-  td code { background:var(--bg3);padding:0.1rem 0.4rem;border-radius:4px; }
-  .tag { display:inline-block;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.75rem;font-weight:600; }
-  .tag.green { background:#56d3a022;color:var(--accent2); }
-  .tag.yellow { background:#f5c84222;color:var(--yellow); }
-  footer { text-align:center;padding:2rem;color:var(--muted);font-size:0.82rem;border-top:1px solid var(--border);margin-top:3rem; }
-</style>
-</head>
-<body>
-<nav>
-  <div class="nav-logo"><span>OPI</span> · Docs</div>
-  <div class="nav-links">
-    <a href="/">Packages</a>
-    <a href="/docs.html">Docs</a>
-    <a href="https://github.com/fraziym/omnikarai" target="_blank">GitHub</a>
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Docs · OPI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="opi.css"/>
+</head><body>
+<div class="bg"></div><div class="bgr"></div>
+<header class="hdr" id="hdr">
+  <div class="cx nav">
+    <a href="index.html" class="logo"><div class="lm"></div><span class="lw">OPI</span><span class="lt">Omnikarai</span></a>
+    <div class="nl" id="nl"><a href="search.html" class="na">Packages</a><a href="docs.html" class="na on">Docs</a><div class="nd"></div><a href="#" class="na">Sign in</a><a href="#" class="btn bs bc">Register</a></div>
+    <button class="hb" id="hb" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
   </div>
-</nav>
-
-<div class="layout">
-  <nav class="sidebar">
-    <h4>omnip</h4>
-    <a href="#install">install</a>
-    <a href="#uninstall">uninstall</a>
-    <a href="#list">list</a>
-    <a href="#info">info</a>
-    <a href="#search">search</a>
-    <a href="#publish">publish</a>
-    <a href="#update">update</a>
-    <a href="#init">init</a>
-    <h4 style="margin-top:1.5rem">API</h4>
-    <a href="#api-list">GET /packages</a>
-    <a href="#api-get">GET /packages/:name</a>
-    <a href="#api-post">POST /packages</a>
-    <h4 style="margin-top:1.5rem">Guides</h4>
-    <a href="#toml">omnikarai.toml</a>
-    <a href="#creating">Creating a package</a>
-  </nav>
-
-  <div class="content">
-    <h1>omnip Reference</h1>
-    <p>omnip is the official package manager for the Omnikarai language. It installs packages from the OPI registry or from local directories.</p>
-
-    <div class="code-block"><span class="cmd">omnip</span> <span class="arg">&lt;command&gt;</span> [options]</div>
-
-    <!-- INSTALL -->
-    <h2 id="install">install</h2>
-    <p>Install a package from OPI or from the current directory.</p>
-    <div class="code-block"><span class="cmd">omnip</span> install <span class="arg">math_extra</span>     <span class="comment"># from OPI registry</span>
-<span class="cmd">omnip</span> install <span class="arg">.</span>              <span class="comment"># from current directory (needs omnikarai.toml)</span></div>
-    <p>Packages are installed to <code>%USERPROFILE%\.omnikarai\modules\&lt;name&gt;\</code></p>
-    <p>After installing, use in your .ok file with:</p>
-    <div class="code-block"><span class="flag">use</span> math_extra</div>
-
-    <!-- UNINSTALL -->
-    <h2 id="uninstall">uninstall</h2>
-    <p>Remove an installed package.</p>
-    <div class="code-block"><span class="cmd">omnip</span> uninstall <span class="arg">math_extra</span></div>
-
-    <!-- LIST -->
-    <h2 id="list">list</h2>
-    <p>Show all installed packages with their versions and descriptions.</p>
-    <div class="code-block"><span class="cmd">omnip</span> list</div>
-
-    <!-- INFO -->
-    <h2 id="info">info</h2>
-    <p>Show detailed information about an installed package.</p>
-    <div class="code-block"><span class="cmd">omnip</span> info <span class="arg">math_extra</span></div>
-
-    <!-- SEARCH -->
-    <h2 id="search">search</h2>
-    <p>Search the OPI registry by name, description or keywords.</p>
-    <div class="code-block"><span class="cmd">omnip</span> search <span class="arg">math</span>
-<span class="cmd">omnip</span> search <span class="arg">string</span></div>
-
-    <!-- PUBLISH -->
-    <h2 id="publish">publish</h2>
-    <p>Publish your package to OPI. You must have an <code>omnikarai.toml</code> in the current directory.</p>
-    <div class="code-block"><span class="cmd">omnip</span> publish <span class="arg">.</span></div>
-    <p>This reads your <code>omnikarai.toml</code>, packages all <code>.ok</code> files, and uploads to OPI.</p>
-
-    <!-- UPDATE -->
-    <h2 id="update">update</h2>
-    <p>Update installed packages to their latest versions.</p>
-    <div class="code-block"><span class="cmd">omnip</span> update                <span class="comment"># update all</span>
-<span class="cmd">omnip</span> update <span class="arg">math_extra</span>  <span class="comment"># update one</span></div>
-
-    <!-- INIT -->
-    <h2 id="init">init</h2>
-    <p>Create an <code>omnikarai.toml</code> file in the current directory to start a new package.</p>
-    <div class="code-block"><span class="cmd">omnip</span> init</div>
-
-    <!-- TOML -->
-    <h2 id="toml">omnikarai.toml</h2>
-    <p>Every package needs an <code>omnikarai.toml</code> at its root.</p>
-    <div class="code-block">[metadata]
-name        = "my_package"
+</header>
+<main>
+  <div class="docs-hero cx">
+    <div class="pill pa rv" style="margin-bottom:var(--s3);width:fit-content"><span class="pdot"></span>omnip v2.0</div>
+    <h1 class="docs-h1 rv d1">Documentation</h1>
+    <p class="docs-sub rv d2">Everything you need to install, publish, and manage Omnikarai packages.</p>
+  </div>
+  <div class="cx">
+    <div class="dl">
+      <nav class="dn3"><div class="dns"><div class="dnt">Getting started</div><a href="#build" class="dna on">Building omnip</a><a href="#cmds" class="dna">Commands</a></div><div class="dns"><div class="dnt">Publishing</div><a href="#token" class="dna">API tokens</a><a href="#toml" class="dna">omnikarai.toml</a><a href="#pub" class="dna">Publishing</a></div><div class="dns"><div class="dnt">Storage</div><a href="#localdb" class="dna">Local database</a></div></nav>
+      <div class="db">
+        <section class="ds card" id="build"><h2>Building omnip</h2><div class="prose"><h3>Compile (GCC)</h3><pre><code>gcc -O2 -o omnip.exe omnip/src/omnip.c -lwinhttp -lkernel32</code></pre><h3>Compile (MSVC)</h3><pre><code>cl /O2 omnip.c winhttp.lib kernel32.lib /Fe:omnip.exe</code></pre><p>Add <code>omnip.exe</code> to your PATH and you're ready.</p></div></section>
+        <section class="ds card" id="cmds"><h2>Commands</h2><div class="prose"><pre><code>omnip install &lt;package&gt;     # install from OPI
+omnip install .              # install local module
+omnip uninstall &lt;package&gt;   # remove package
+omnip list                   # list installed packages
+omnip info &lt;package&gt;         # show package details
+omnip search &lt;query&gt;         # search OPI registry
+omnip publish .              # publish to OPI
+omnip update [package]       # update packages
+omnip init                   # create omnikarai.toml
+omnip version                # show version</code></pre></div></section>
+        <section class="ds card" id="token"><h2>API tokens</h2><div class="prose"><p>Create an account, then go to <strong>Dashboard → API Tokens → New token</strong>.</p><p>Set before publishing:</p><pre><code>set OPI_TOKEN=opi_your_token_here</code></pre></div></section>
+        <section class="ds card" id="toml"><h2>omnikarai.toml</h2><div class="prose"><p>Run <code>omnip init</code> to generate a template:</p><pre><code>[metadata]
+name        = "your_package"
 version     = "1.0.0"
-description = "A useful Omnikarai package"
+description = "What your package does"
 author      = "Your Name"
 license     = "MIT"
-homepage    = "https://github.com/you/my_package"
 
 [dependencies]
-math = "&gt;=1.0"</div>
-
-    <!-- CREATING -->
-    <h2 id="creating">Creating a Package</h2>
-    <p>A minimal package is just a directory with <code>omnikarai.toml</code> and one or more <code>.ok</code> files.</p>
-    <div class="code-block">my_package/
-  omnikarai.toml
-  main.ok          <span class="comment"># exported functions</span>
-  helpers.ok       <span class="comment"># internal helpers</span></div>
-    <p>To publish:</p>
-    <div class="code-block">cd my_package
-<span class="cmd">omnip</span> init          <span class="comment"># creates omnikarai.toml if missing</span>
-<span class="comment"># edit omnikarai.toml</span>
-<span class="cmd">omnip</span> publish <span class="arg">.</span>     <span class="comment"># uploads to OPI</span></div>
-
-    <!-- API -->
-    <h2 id="api-list">API — GET /api/packages</h2>
-    <p>Returns all packages. Supports <code>?q=query</code> for search.</p>
-    <div class="code-block">GET https://opi.vercel.app/api/packages
-GET https://opi.vercel.app/api/packages?q=math</div>
-    <p>Response:</p>
-    <div class="code-block">{ "total": 3, "packages": [ { "name": "math_extra", "version": "1.0.0", ... } ] }</div>
-
-    <h2 id="api-get">API — GET /api/packages/:name</h2>
-    <div class="code-block">GET https://opi.vercel.app/api/packages/math_extra</div>
-
-    <h2 id="api-post">API — POST /api/packages</h2>
-    <p>Publish a new package. Body must be JSON.</p>
-    <div class="code-block">POST https://opi.vercel.app/api/packages
-Content-Type: application/json
-
-{
-  "name":        "my_package",
-  "version":     "1.0.0",
-  "description": "Does something useful",
-  "author":      "Your Name",
-  "license":     "MIT",
-  "keywords":    ["util", "math"],
-  "files":       []
-}</div>
+# math_extra = "&gt;=1.0"</code></pre></div></section>
+        <section class="ds card" id="pub"><h2>Publishing</h2><div class="prose"><pre><code>omnip publish .</code></pre><p>omnip reads <code>omnikarai.toml</code> and sends metadata to OPI. Bump <code>version</code> for each new release.</p></div></section>
+        <section class="ds card" id="localdb"><h2>Local database</h2><div class="prose"><p>Installed packages are stored at <code>~/.omnip/installed.json</code>:</p><pre><code>[{"name":"math_extra","version":"1.0.0","source":"opi-nine.vercel.app","install_path":"C:\\Users\\...\\math_extra"}]</code></pre><p>Modules live at <code>~/.omnikarai/modules/&lt;name&gt;/</code></p></div></section>
+      </div>
+    </div>
   </div>
-</div>
-
-<footer>OPI · Omnikarai Package Index · <a href="/">Home</a> · <a href="/api/stats">API Status</a></footer>
-</body>
-</html>
+</main>
+<footer class="ftr"><div class="cx fi"><div class="ft"><a href="index.html" class="logo"><div class="lm"></div><span class="lw">OPI</span></a><span class="ftag">Omnikarai Package Index · Fraziym Tech &amp; AI</span></div><div class="fln"><a href="search.html">Packages</a><a href="docs.html">Docs</a><a href="#">Register</a></div><div class="fb"><span class="fst"><span class="sdot"></span>All systems operational</span><span>Fraziym Tech &amp; AI · 2026</span></div></div></footer>
+<script src="opi.js"></script>
+</body></html>
