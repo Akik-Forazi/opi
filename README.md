@@ -2,7 +2,8 @@
 
 The official package registry for the [Omnikarai](https://github.com/fraziym/omnikarai) language.
 
-**Live at:** https://opi-nine.vercel.app
+**Live at:** https://opi-nine.vercel.app 
+<img src=assets/opi_preview.png>
 
 ---
 
